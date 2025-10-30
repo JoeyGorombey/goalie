@@ -24,10 +24,22 @@
   text-decoration: none;
   font-weight: 500;
   transition: opacity 0.2s;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
 }
 
 .navbar-links a:hover {
   opacity: 0.8;
-  text-decoration: underline;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-links a.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.navbar-brand a {
+  text-decoration: none;
+  color: inherit;
 }
 
