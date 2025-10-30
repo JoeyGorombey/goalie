@@ -1,9 +1,13 @@
+import { useNavigate } from 'react-router-dom'
 import './GoalCard.css'
 
 function GoalCard({ goal }) {
+  const navigate = useNavigate()
+
   const handleCardClick = () => {
     console.log('Opening goal details for:', goal.title)
-    // Later: navigate to detail page
+    // Navigate to goal details page, passing the goal data
+    navigate(`/goal/${goal.id}`, { state: { goal } })
   }
 
   const handleMenuClick = (e) => {
