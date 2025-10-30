@@ -25,14 +25,17 @@ function GoalDetails() {
   const [editingMilestoneId, setEditingMilestoneId] = useState(null)
   const [editingMilestoneText, setEditingMilestoneText] = useState('')
 
-  // Load from storage if not in state
+  // Load from API if not in state
   useEffect(() => {
-    if (!goal) {
-      const loadedGoal = getGoalById(goalId)
-      if (loadedGoal) {
-        setGoal(loadedGoal)
+    const loadGoal = async () => {
+      if (!goal) {
+        const loadedGoal = await getGoalById(goalId)
+        if (loadedGoal) {
+          setGoal(loadedGoal)
+        }
       }
     }
+    loadGoal()
   }, [goalId, goal])
 
   // Initialize edit form
@@ -42,43 +45,43 @@ function GoalDetails() {
     }
   }, [isEditing, goal])
 
-  const handleSave = () => {
-    const updated = updateGoal(goalId, editedGoal)
+  const handleSave = async () => {
+    const updated = await updateGoal(goalId, editedGoal)
     if (updated) {
       setGoal(updated)
       setIsEditing(false)
     }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${goal.title}"?`)) {
-      const success = deleteGoal(goalId)
+      const success = await deleteGoal(goalId)
       if (success) {
         navigate('/')
       }
     }
   }
 
-  const handleToggleMilestone = (milestoneId) => {
-    const updated = toggleMilestone(goalId, milestoneId)
+  const handleToggleMilestone = async (milestoneId) => {
+    const updated = await toggleMilestone(goalId, milestoneId)
     if (updated) {
       setGoal(updated)
     }
   }
 
-  const handleAddMilestone = () => {
+  const handleAddMilestone = async () => {
     if (!newMilestoneText.trim()) return
     
-    const updated = addMilestone(goalId, newMilestoneText)
+    const updated = await addMilestone(goalId, newMilestoneText)
     if (updated) {
       setGoal(updated)
       setNewMilestoneText('')
     }
   }
 
-  const handleDeleteMilestone = (milestoneId) => {
+  const handleDeleteMilestone = async (milestoneId) => {
     if (window.confirm('Are you sure you want to delete this milestone?')) {
-      const updated = deleteMilestone(goalId, milestoneId)
+      const updated = await deleteMilestone(goalId, milestoneId)
       if (updated) {
         setGoal(updated)
       }
@@ -90,10 +93,10 @@ function GoalDetails() {
     setEditingMilestoneText(milestone.text)
   }
 
-  const handleSaveMilestone = (milestoneId) => {
+  const handleSaveMilestone = async (milestoneId) => {
     if (!editingMilestoneText.trim()) return
     
-    const updated = updateMilestone(goalId, milestoneId, editingMilestoneText)
+    const updated = await updateMilestone(goalId, milestoneId, editingMilestoneText)
     if (updated) {
       setGoal(updated)
       setEditingMilestoneId(null)

@@ -9,16 +9,21 @@ function Dashboard() {
   const [goals, setGoals] = useState([])
   const [showAddForm, setShowAddForm] = useState(false)
 
-  // Load goals from storage when component mounts
+  // Load goals from API when component mounts
   useEffect(() => {
-    const loadedGoals = getAllGoals()
-    setGoals(loadedGoals)
+    const loadGoals = async () => {
+      const loadedGoals = await getAllGoals()
+      setGoals(loadedGoals)
+    }
+    loadGoals()
   }, [])
 
-  const handleAddGoal = (goalData) => {
-    const newGoal = addGoal(goalData)
-    setGoals([...goals, newGoal])
-    setShowAddForm(false)
+  const handleAddGoal = async (goalData) => {
+    const newGoal = await addGoal(goalData)
+    if (newGoal) {
+      setGoals([...goals, newGoal])
+      setShowAddForm(false)
+    }
   }
 
   return (
