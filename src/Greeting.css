@@ -1,0 +1,17 @@
+.greeting {
+  padding: 2rem;
+  text-align: center;
+}
+
+.greeting h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+.greeting p {
+  margin: 0;
+  color: #666;
+  font-size: 1.1rem;
+}
+
