@@ -3,26 +3,35 @@ import NavBar from './NavBar.jsx'
 import Greeting from './Greeting.jsx'
 import GoalList from './GoalList.jsx'
 import { getAllGoals, addGoal } from './services/goalStorage.js'
+import { useError } from './context/ErrorContext.jsx'
 import './Dashboard.css'
 
 function Dashboard() {
   const [goals, setGoals] = useState([])
   const [showAddForm, setShowAddForm] = useState(false)
+  const { showError } = useError()
 
   // Load goals from API when component mounts
   useEffect(() => {
     const loadGoals = async () => {
-      const loadedGoals = await getAllGoals()
-      setGoals(loadedGoals)
+      try {
+        const loadedGoals = await getAllGoals()
+        setGoals(loadedGoals)
+      } catch (error) {
+        showError(error.message || 'Failed to load goals. Please check your connection.')
+        setGoals([]) // Set empty array on error
+      }
     }
     loadGoals()
-  }, [])
+  }, [showError])
 
   const handleAddGoal = async (goalData) => {
-    const newGoal = await addGoal(goalData)
-    if (newGoal) {
+    try {
+      const newGoal = await addGoal(goalData)
       setGoals([...goals, newGoal])
       setShowAddForm(false)
+    } catch (error) {
+      showError(error.message || 'Failed to create goal. Please try again.')
     }
   }
 

@@ -10,12 +10,14 @@ import {
   deleteMilestone,
   updateMilestone
 } from './services/goalStorage.js'
+import { useError } from './context/ErrorContext.jsx'
 import './GoalDetails.css'
 
 function GoalDetails() {
   const { goalId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
+  const { showError } = useError()
   
   // Get the goal data (from state or storage)
   const [goal, setGoal] = useState(location.state?.goal)
@@ -29,14 +31,18 @@ function GoalDetails() {
   useEffect(() => {
     const loadGoal = async () => {
       if (!goal) {
-        const loadedGoal = await getGoalById(goalId)
-        if (loadedGoal) {
-          setGoal(loadedGoal)
+        try {
+          const loadedGoal = await getGoalById(goalId)
+          if (loadedGoal) {
+            setGoal(loadedGoal)
+          }
+        } catch (error) {
+          showError(error.message || 'Failed to load goal. Please check your connection.')
         }
       }
     }
     loadGoal()
-  }, [goalId, goal])
+  }, [goalId, goal, showError])
 
   // Initialize edit form
   useEffect(() => {
@@ -46,44 +52,54 @@ function GoalDetails() {
   }, [isEditing, goal])
 
   const handleSave = async () => {
-    const updated = await updateGoal(goalId, editedGoal)
-    if (updated) {
+    try {
+      const updated = await updateGoal(goalId, editedGoal)
       setGoal(updated)
       setIsEditing(false)
+    } catch (error) {
+      showError(error.message || 'Failed to update goal. Please try again.')
     }
   }
 
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${goal.title}"?`)) {
-      const success = await deleteGoal(goalId)
-      if (success) {
+      try {
+        await deleteGoal(goalId)
         navigate('/')
+      } catch (error) {
+        showError(error.message || 'Failed to delete goal. Please try again.')
       }
     }
   }
 
   const handleToggleMilestone = async (milestoneId) => {
-    const updated = await toggleMilestone(goalId, milestoneId)
-    if (updated) {
+    try {
+      const updated = await toggleMilestone(goalId, milestoneId)
       setGoal(updated)
+    } catch (error) {
+      showError(error.message || 'Failed to toggle milestone. Please try again.')
     }
   }
 
   const handleAddMilestone = async () => {
     if (!newMilestoneText.trim()) return
     
-    const updated = await addMilestone(goalId, newMilestoneText)
-    if (updated) {
+    try {
+      const updated = await addMilestone(goalId, newMilestoneText)
       setGoal(updated)
       setNewMilestoneText('')
+    } catch (error) {
+      showError(error.message || 'Failed to add milestone. Please try again.')
     }
   }
 
   const handleDeleteMilestone = async (milestoneId) => {
     if (window.confirm('Are you sure you want to delete this milestone?')) {
-      const updated = await deleteMilestone(goalId, milestoneId)
-      if (updated) {
+      try {
+        const updated = await deleteMilestone(goalId, milestoneId)
         setGoal(updated)
+      } catch (error) {
+        showError(error.message || 'Failed to delete milestone. Please try again.')
       }
     }
   }
@@ -96,11 +112,13 @@ function GoalDetails() {
   const handleSaveMilestone = async (milestoneId) => {
     if (!editingMilestoneText.trim()) return
     
-    const updated = await updateMilestone(goalId, milestoneId, editingMilestoneText)
-    if (updated) {
+    try {
+      const updated = await updateMilestone(goalId, milestoneId, editingMilestoneText)
       setGoal(updated)
       setEditingMilestoneId(null)
       setEditingMilestoneText('')
+    } catch (error) {
+      showError(error.message || 'Failed to update milestone. Please try again.')
     }
   }
 

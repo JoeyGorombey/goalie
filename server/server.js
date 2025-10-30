@@ -74,6 +74,25 @@ const writeGoals = async (goals) => {
 
 // API Routes
 
+// GET API info
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'Goalie API is running! 🥅',
+    version: '1.0.0',
+    endpoints: {
+      'GET /api/goals': 'Get all goals',
+      'GET /api/goals/:id': 'Get a single goal by ID',
+      'POST /api/goals': 'Create a new goal',
+      'PUT /api/goals/:id': 'Update a goal',
+      'DELETE /api/goals/:id': 'Delete a goal',
+      'POST /api/goals/:goalId/milestones': 'Add a milestone to a goal',
+      'PUT /api/goals/:goalId/milestones/:milestoneId': 'Update a milestone',
+      'DELETE /api/goals/:goalId/milestones/:milestoneId': 'Delete a milestone',
+      'POST /api/goals/:goalId/milestones/:milestoneId/toggle': 'Toggle milestone completion'
+    }
+  });
+});
+
 // GET all goals
 app.get('/api/goals', async (req, res) => {
   try {

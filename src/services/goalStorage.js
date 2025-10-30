@@ -12,11 +12,13 @@ export const calculateProgress = (milestones) => {
 export const getAllGoals = async () => {
   try {
     const response = await fetch(`${API_URL}/goals`);
-    if (!response.ok) throw new Error('Failed to fetch goals');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch goals: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error loading goals:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -24,11 +26,16 @@ export const getAllGoals = async () => {
 export const getGoalById = async (id) => {
   try {
     const response = await fetch(`${API_URL}/goals/${id}`);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Goal not found');
+      }
+      throw new Error(`Failed to fetch goal: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error loading goal:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -43,11 +50,13 @@ export const addGoal = async (goalData) => {
       body: JSON.stringify(goalData),
     });
     
-    if (!response.ok) throw new Error('Failed to create goal');
+    if (!response.ok) {
+      throw new Error(`Failed to create goal: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error creating goal:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -62,11 +71,13 @@ export const updateGoal = async (id, updates) => {
       body: JSON.stringify(updates),
     });
     
-    if (!response.ok) throw new Error('Failed to update goal');
+    if (!response.ok) {
+      throw new Error(`Failed to update goal: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error updating goal:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -77,11 +88,13 @@ export const deleteGoal = async (id) => {
       method: 'DELETE',
     });
     
-    if (!response.ok) throw new Error('Failed to delete goal');
+    if (!response.ok) {
+      throw new Error(`Failed to delete goal: ${response.statusText}`);
+    }
     return true;
   } catch (error) {
     console.error('Error deleting goal:', error);
-    return false;
+    throw error;
   }
 };
 
@@ -92,11 +105,13 @@ export const toggleMilestone = async (goalId, milestoneId) => {
       method: 'POST',
     });
     
-    if (!response.ok) throw new Error('Failed to toggle milestone');
+    if (!response.ok) {
+      throw new Error(`Failed to toggle milestone: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error toggling milestone:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -111,11 +126,13 @@ export const addMilestone = async (goalId, milestoneText) => {
       body: JSON.stringify({ text: milestoneText }),
     });
     
-    if (!response.ok) throw new Error('Failed to add milestone');
+    if (!response.ok) {
+      throw new Error(`Failed to add milestone: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error adding milestone:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -126,11 +143,13 @@ export const deleteMilestone = async (goalId, milestoneId) => {
       method: 'DELETE',
     });
     
-    if (!response.ok) throw new Error('Failed to delete milestone');
+    if (!response.ok) {
+      throw new Error(`Failed to delete milestone: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error deleting milestone:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -145,10 +164,12 @@ export const updateMilestone = async (goalId, milestoneId, newText) => {
       body: JSON.stringify({ text: newText }),
     });
     
-    if (!response.ok) throw new Error('Failed to update milestone');
+    if (!response.ok) {
+      throw new Error(`Failed to update milestone: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error updating milestone:', error);
-    return null;
+    throw error;
   }
 };
