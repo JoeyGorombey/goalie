@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "title": "Learn React Fundamentals",
+    "description": "Master components, props, state, and hooks to build modern web applications.",
+    "dueDate": "Nov 15, 2025",
+    "milestones": [
+      {
+        "id": 1,
+        "text": "Understand components and JSX",
+        "completed": false
+      },
+      {
+        "id": 2,
+        "text": "Learn useState and props",
+        "completed": false
+      },
+      {
+        "id": 3,
+        "text": "Master useEffect and lifecycle",
+        "completed": false
+      },
+      {
+        "id": 4,
+        "text": "Build a full project",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Build Goalie App",
+    "description": "Create a full-stack goal tracking application with React and a database.",
+    "dueDate": "Dec 31, 2025",
+    "milestones": [
+      {
+        "id": 1,
+        "text": "Implement congratulations component",
+        "completed": false
+      },
+      {
+        "id": 3,
+        "text": "Display other user comments on goals",
+        "completed": false
+      },
+      {
+        "id": 2,
+        "text": "fit page to size",
+        "completed": false
+      }
+    ],
+    "updatedAt": "2025-10-30T23:40:02.238Z"
+  },
+  {
+    "id": 3,
+    "title": "Win",
+    "description": "win",
+    "dueDate": "Ongoing",
+    "milestones": [
+      {
+        "id": 1,
+        "text": "Winning",
+        "completed": true
+      }
+    ],
+    "createdAt": "2025-10-30T22:44:59.661Z"
+  },
+  {
+    "id": 4,
+    "title": "SomeGoal",
+    "description": "SomeDesc",
+    "dueDate": "Date",
+    "milestones": [
+      {
+        "id": 1,
+        "text": "somemilestone",
+        "completed": false
+      }
+    ],
+    "createdAt": "2025-10-30T23:20:52.315Z"
+  }
+]

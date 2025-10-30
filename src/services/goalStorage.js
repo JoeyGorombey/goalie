@@ -173,3 +173,24 @@ export const updateMilestone = async (goalId, milestoneId, newText) => {
     throw error;
   }
 };
+
+// Reorder milestones
+export const reorderMilestones = async (goalId, reorderedMilestones) => {
+  try {
+    const response = await fetch(`${API_URL}/goals/${goalId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ milestones: reorderedMilestones }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to reorder milestones: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error reordering milestones:', error);
+    throw error;
+  }
+};

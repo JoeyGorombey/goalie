@@ -204,11 +204,45 @@
   padding: 1rem;
   background: #f9f9f9;
   border-radius: 8px;
-  transition: background 0.2s;
+  transition: background 0.2s, box-shadow 0.2s;
+  position: relative;
+  cursor: grab;
+  user-select: none;
 }
 
 .milestone-item:hover {
   background: #f0f0f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.milestone-item.dragging {
+  opacity: 0.5;
+  background: #e0e0e0;
+  cursor: grabbing;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.milestone-item:active {
+  cursor: grabbing;
+}
+
+.milestone-drag-handle {
+  color: #999;
+  font-size: 1.2rem;
+  padding: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  flex-shrink: 0;
+  pointer-events: none; /* Prevent handle from interfering with drag */
+}
+
+/* Make interactive elements not trigger drag */
+.milestone-checkbox,
+.milestone-actions,
+.milestone-actions button {
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .milestone-checkbox {

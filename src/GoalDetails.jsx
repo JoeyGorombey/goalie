@@ -1,5 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { 
   getGoalById, 
   updateGoal, 
@@ -8,7 +24,8 @@ import {
   toggleMilestone,
   addMilestone,
   deleteMilestone,
-  updateMilestone
+  updateMilestone,
+  reorderMilestones
 } from './services/goalStorage.js'
 import { useError } from './context/ErrorContext.jsx'
 import './GoalDetails.css'
@@ -26,6 +43,56 @@ function GoalDetails() {
   const [newMilestoneText, setNewMilestoneText] = useState('')
   const [editingMilestoneId, setEditingMilestoneId] = useState(null)
   const [editingMilestoneText, setEditingMilestoneText] = useState('')
+
+  // Drag and drop sensors - add delay to prevent accidental drags when clicking buttons
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before drag starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // Handle milestone drag end
+  const handleDragEnd = async (event) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    if (!goal || !goal.milestones) {
+      return
+    }
+
+    const oldIndex = goal.milestones.findIndex(m => m.id === active.id)
+    const newIndex = goal.milestones.findIndex(m => m.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return
+    }
+
+    // Save original state for error recovery
+    const originalGoal = { ...goal }
+    const originalMilestones = [...goal.milestones]
+
+    // Reorder milestones locally for immediate feedback
+    const newMilestones = arrayMove(goal.milestones, oldIndex, newIndex)
+    setGoal({ ...goal, milestones: newMilestones })
+
+    // Save to backend
+    try {
+      const updated = await reorderMilestones(goalId, newMilestones)
+      setGoal(updated)
+    } catch (error) {
+      // Revert on error
+      setGoal({ ...originalGoal, milestones: originalMilestones })
+      showError(error.message || 'Failed to reorder milestones. Please try again.')
+    }
+  }
 
   // Load from API if not in state
   useEffect(() => {
@@ -239,63 +306,33 @@ function GoalDetails() {
         <div className="goal-info-section">
           <h3>Milestones</h3>
           {goal.milestones && goal.milestones.length > 0 ? (
-            <div className="milestones-list">
-              {goal.milestones.map((milestone) => (
-                <div key={milestone.id} className="milestone-item">
-                  {editingMilestoneId === milestone.id ? (
-                    <div className="milestone-edit-row">
-                      <input
-                        type="text"
-                        value={editingMilestoneText}
-                        onChange={(e) => setEditingMilestoneText(e.target.value)}
-                        className="milestone-edit-input"
-                        autoFocus
-                      />
-                      <button 
-                        onClick={() => handleSaveMilestone(milestone.id)}
-                        className="milestone-save-btn"
-                      >
-                        ✓
-                      </button>
-                      <button 
-                        onClick={handleCancelEditMilestone}
-                        className="milestone-cancel-btn"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <input
-                        type="checkbox"
-                        checked={milestone.completed}
-                        onChange={() => handleToggleMilestone(milestone.id)}
-                        className="milestone-checkbox"
-                      />
-                      <span className={milestone.completed ? 'milestone-text completed' : 'milestone-text'}>
-                        {milestone.text}
-                      </span>
-                      <div className="milestone-actions">
-                        <button
-                          onClick={() => handleStartEditMilestone(milestone)}
-                          className="milestone-edit-btn"
-                          title="Edit milestone"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMilestone(milestone.id)}
-                          className="milestone-delete-btn"
-                          title="Delete milestone"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </>
-                  )}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={goal.milestones.map(m => m.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="milestones-list">
+                  {goal.milestones.map((milestone) => (
+                    <SortableMilestone
+                      key={milestone.id}
+                      milestone={milestone}
+                      editingMilestoneId={editingMilestoneId}
+                      editingMilestoneText={editingMilestoneText}
+                      onToggle={handleToggleMilestone}
+                      onStartEdit={handleStartEditMilestone}
+                      onSaveEdit={handleSaveMilestone}
+                      onCancelEdit={handleCancelEditMilestone}
+                      onDelete={handleDeleteMilestone}
+                      onTextChange={setEditingMilestoneText}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           ) : (
             <p className="no-milestones">No milestones yet. Add some below!</p>
           )}
@@ -325,6 +362,111 @@ function GoalDetails() {
             <p className="placeholder-subtext">Future feature: Break down milestones into smaller, actionable steps.</p>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Sortable Milestone Component
+function SortableMilestone({
+  milestone,
+  editingMilestoneId,
+  editingMilestoneText,
+  onToggle,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+  onTextChange,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: milestone.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  if (editingMilestoneId === milestone.id) {
+    return (
+      <div className="milestone-item">
+        <div className="milestone-edit-row">
+          <input
+            type="text"
+            value={editingMilestoneText}
+            onChange={(e) => onTextChange(e.target.value)}
+            className="milestone-edit-input"
+            autoFocus
+          />
+          <button 
+            onClick={() => onSaveEdit(milestone.id)}
+            className="milestone-save-btn"
+          >
+            ✓
+          </button>
+          <button 
+            onClick={onCancelEdit}
+            className="milestone-cancel-btn"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`milestone-item ${isDragging ? 'dragging' : ''}`}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="milestone-drag-handle">
+        ⋮⋮
+      </div>
+      <input
+        type="checkbox"
+        checked={milestone.completed}
+        onChange={(e) => {
+          e.stopPropagation() // Prevent drag when clicking checkbox
+          onToggle(milestone.id)
+        }}
+        className="milestone-checkbox"
+        onClick={(e) => e.stopPropagation()} // Prevent drag on click
+      />
+      <span className={milestone.completed ? 'milestone-text completed' : 'milestone-text'}>
+        {milestone.text}
+      </span>
+      <div className="milestone-actions" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onStartEdit(milestone)
+          }}
+          className="milestone-edit-btn"
+          title="Edit milestone"
+        >
+          ✏️
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(milestone.id)
+          }}
+          className="milestone-delete-btn"
+          title="Delete milestone"
+        >
+          🗑️
+        </button>
       </div>
     </div>
   )
