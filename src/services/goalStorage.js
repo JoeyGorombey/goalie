@@ -13,28 +13,39 @@ export const getAllGoals = () => {
           title: "Learn React Fundamentals",
           description: "Master components, props, state, and hooks to build modern web applications.",
           dueDate: "Nov 15, 2025",
-          progress: 65
+          milestones: [
+            { id: 1, text: "Understand components and JSX", completed: true },
+            { id: 2, text: "Learn useState and props", completed: true },
+            { id: 3, text: "Master useEffect and lifecycle", completed: true },
+            { id: 4, text: "Build a full project", completed: false }
+          ]
         },
         {
           id: 2,
           title: "Build Goalie App",
           description: "Create a full-stack goal tracking application with React and a database.",
           dueDate: "Dec 31, 2025",
-          progress: 30
+          milestones: [
+            { id: 1, text: "Set up React project", completed: true },
+            { id: 2, text: "Create dashboard and components", completed: true },
+            { id: 3, text: "Add local storage", completed: true },
+            { id: 4, text: "Implement milestones feature", completed: false },
+            { id: 5, text: "Connect to real database", completed: false },
+            { id: 6, text: "Deploy to production", completed: false }
+          ]
         },
         {
           id: 3,
           title: "Exercise 3x per week",
           description: "Maintain a consistent workout routine for better health and energy.",
           dueDate: "Ongoing",
-          progress: 80
-        },
-        {
-          id: 4,
-          title: "Read 12 books this year",
-          description: "Expand knowledge and improve focus by reading one book per month.",
-          dueDate: "Dec 31, 2025",
-          progress: 45
+          milestones: [
+            { id: 1, text: "Week 1 - 3 workouts", completed: true },
+            { id: 2, text: "Week 2 - 3 workouts", completed: true },
+            { id: 3, text: "Week 3 - 3 workouts", completed: true },
+            { id: 4, text: "Week 4 - 3 workouts", completed: true },
+            { id: 5, text: "Week 5 - 3 workouts", completed: false }
+          ]
         }
       ]
       saveAllGoals(sampleGoals)
@@ -64,6 +75,13 @@ export const getGoalById = (id) => {
   return goals.find(goal => goal.id === parseInt(id))
 }
 
+// Calculate progress based on completed milestones
+export const calculateProgress = (milestones) => {
+  if (!milestones || milestones.length === 0) return 0
+  const completed = milestones.filter(m => m.completed).length
+  return Math.round((completed / milestones.length) * 100)
+}
+
 // Add a new goal
 export const addGoal = (goalData) => {
   const goals = getAllGoals()
@@ -73,12 +91,19 @@ export const addGoal = (goalData) => {
     ? Math.max(...goals.map(g => g.id)) + 1 
     : 1
   
+  // Convert steps to milestones with IDs
+  const milestones = (goalData.steps || []).map((step, index) => ({
+    id: index + 1,
+    text: step,
+    completed: false
+  }))
+  
   const newGoal = {
     id: newId,
     title: goalData.title || "Untitled Goal",
     description: goalData.description || "",
     dueDate: goalData.dueDate || "No due date",
-    progress: goalData.progress || 0,
+    milestones: milestones,
     createdAt: new Date().toISOString()
   }
   
@@ -125,5 +150,72 @@ export const deleteGoal = (id) => {
 export const clearAllGoals = () => {
   localStorage.removeItem(STORAGE_KEY)
   return true
+}
+
+// Toggle milestone completion
+export const toggleMilestone = (goalId, milestoneId) => {
+  const goals = getAllGoals()
+  const goal = goals.find(g => g.id === parseInt(goalId))
+  
+  if (!goal || !goal.milestones) return null
+  
+  const milestone = goal.milestones.find(m => m.id === milestoneId)
+  if (!milestone) return null
+  
+  milestone.completed = !milestone.completed
+  
+  saveAllGoals(goals)
+  return goal
+}
+
+// Add milestone to a goal
+export const addMilestone = (goalId, milestoneText) => {
+  const goals = getAllGoals()
+  const goal = goals.find(g => g.id === parseInt(goalId))
+  
+  if (!goal) return null
+  
+  if (!goal.milestones) goal.milestones = []
+  
+  const newId = goal.milestones.length > 0
+    ? Math.max(...goal.milestones.map(m => m.id)) + 1
+    : 1
+  
+  const newMilestone = {
+    id: newId,
+    text: milestoneText,
+    completed: false
+  }
+  
+  goal.milestones.push(newMilestone)
+  saveAllGoals(goals)
+  return goal
+}
+
+// Delete milestone from a goal
+export const deleteMilestone = (goalId, milestoneId) => {
+  const goals = getAllGoals()
+  const goal = goals.find(g => g.id === parseInt(goalId))
+  
+  if (!goal || !goal.milestones) return null
+  
+  goal.milestones = goal.milestones.filter(m => m.id !== milestoneId)
+  saveAllGoals(goals)
+  return goal
+}
+
+// Update milestone text
+export const updateMilestone = (goalId, milestoneId, newText) => {
+  const goals = getAllGoals()
+  const goal = goals.find(g => g.id === parseInt(goalId))
+  
+  if (!goal || !goal.milestones) return null
+  
+  const milestone = goal.milestones.find(m => m.id === milestoneId)
+  if (!milestone) return null
+  
+  milestone.text = newText
+  saveAllGoals(goals)
+  return goal
 }
 

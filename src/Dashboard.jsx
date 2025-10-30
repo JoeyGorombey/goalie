@@ -52,6 +52,22 @@ function AddGoalForm({ onSubmit, onCancel }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [steps, setSteps] = useState([''])
+
+  const handleAddStep = () => {
+    setSteps([...steps, ''])
+  }
+
+  const handleStepChange = (index, value) => {
+    const newSteps = [...steps]
+    newSteps[index] = value
+    setSteps(newSteps)
+  }
+
+  const handleRemoveStep = (index) => {
+    const newSteps = steps.filter((_, i) => i !== index)
+    setSteps(newSteps.length > 0 ? newSteps : [''])
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -60,17 +76,21 @@ function AddGoalForm({ onSubmit, onCancel }) {
       return
     }
     
+    // Filter out empty steps
+    const validSteps = steps.filter(step => step.trim() !== '')
+    
     onSubmit({
       title,
       description,
       dueDate: dueDate || 'No due date',
-      progress: 0
+      steps: validSteps
     })
     
     // Reset form
     setTitle('')
     setDescription('')
     setDueDate('')
+    setSteps([''])
   }
 
   return (
@@ -106,6 +126,39 @@ function AddGoalForm({ onSubmit, onCancel }) {
             onChange={(e) => setDueDate(e.target.value)}
             placeholder="e.g., Dec 31, 2025 or Ongoing"
           />
+        </div>
+
+        <div className="form-group">
+          <label>Steps / Milestones</label>
+          <p className="form-help-text">Add the steps needed to complete this goal. Progress will be calculated automatically!</p>
+          {steps.map((step, index) => (
+            <div key={index} className="step-input-row">
+              <input
+                type="text"
+                value={step}
+                onChange={(e) => handleStepChange(index, e.target.value)}
+                placeholder={`Step ${index + 1}`}
+                className="step-input"
+              />
+              {steps.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveStep(index)}
+                  className="remove-step-btn"
+                  title="Remove step"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={handleAddStep}
+            className="add-step-btn"
+          >
+            + Add Another Step
+          </button>
         </div>
 
         <div className="form-actions">

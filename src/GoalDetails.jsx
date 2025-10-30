@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
-import { getGoalById, updateGoal, deleteGoal } from './services/goalStorage.js'
+import { 
+  getGoalById, 
+  updateGoal, 
+  deleteGoal, 
+  calculateProgress,
+  toggleMilestone,
+  addMilestone,
+  deleteMilestone,
+  updateMilestone
+} from './services/goalStorage.js'
 import './GoalDetails.css'
 
 function GoalDetails() {
@@ -12,6 +21,9 @@ function GoalDetails() {
   const [goal, setGoal] = useState(location.state?.goal)
   const [isEditing, setIsEditing] = useState(false)
   const [editedGoal, setEditedGoal] = useState(null)
+  const [newMilestoneText, setNewMilestoneText] = useState('')
+  const [editingMilestoneId, setEditingMilestoneId] = useState(null)
+  const [editingMilestoneText, setEditingMilestoneText] = useState('')
 
   // Load from storage if not in state
   useEffect(() => {
@@ -47,11 +59,51 @@ function GoalDetails() {
     }
   }
 
-  const handleProgressChange = (newProgress) => {
-    const updated = updateGoal(goalId, { progress: newProgress })
+  const handleToggleMilestone = (milestoneId) => {
+    const updated = toggleMilestone(goalId, milestoneId)
     if (updated) {
       setGoal(updated)
     }
+  }
+
+  const handleAddMilestone = () => {
+    if (!newMilestoneText.trim()) return
+    
+    const updated = addMilestone(goalId, newMilestoneText)
+    if (updated) {
+      setGoal(updated)
+      setNewMilestoneText('')
+    }
+  }
+
+  const handleDeleteMilestone = (milestoneId) => {
+    if (window.confirm('Are you sure you want to delete this milestone?')) {
+      const updated = deleteMilestone(goalId, milestoneId)
+      if (updated) {
+        setGoal(updated)
+      }
+    }
+  }
+
+  const handleStartEditMilestone = (milestone) => {
+    setEditingMilestoneId(milestone.id)
+    setEditingMilestoneText(milestone.text)
+  }
+
+  const handleSaveMilestone = (milestoneId) => {
+    if (!editingMilestoneText.trim()) return
+    
+    const updated = updateMilestone(goalId, milestoneId, editingMilestoneText)
+    if (updated) {
+      setGoal(updated)
+      setEditingMilestoneId(null)
+      setEditingMilestoneText('')
+    }
+  }
+
+  const handleCancelEditMilestone = () => {
+    setEditingMilestoneId(null)
+    setEditingMilestoneText('')
   }
 
   // If no goal data, show error
@@ -63,6 +115,11 @@ function GoalDetails() {
       </div>
     )
   }
+
+  // Calculate progress
+  const progress = calculateProgress(goal.milestones)
+  const completedCount = goal.milestones?.filter(m => m.completed).length || 0
+  const totalCount = goal.milestones?.length || 0
 
   // Editing mode
   if (isEditing) {
@@ -107,18 +164,6 @@ function GoalDetails() {
               className="edit-input"
             />
           </div>
-
-          <div className="form-group">
-            <label>Progress ({editedGoal?.progress}%)</label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={editedGoal?.progress || 0}
-              onChange={(e) => setEditedGoal({...editedGoal, progress: parseInt(e.target.value)})}
-              className="progress-slider"
-            />
-          </div>
         </div>
       </div>
     )
@@ -155,53 +200,100 @@ function GoalDetails() {
         </div>
 
         <div className="goal-info-section">
-          <h3>Progress</h3>
-          <div className="progress-controls">
-            <button 
-              onClick={() => handleProgressChange(Math.max(0, goal.progress - 5))}
-              className="progress-btn"
-              disabled={goal.progress === 0}
-            >
-              -5%
-            </button>
-            <button 
-              onClick={() => handleProgressChange(Math.max(0, goal.progress - 1))}
-              className="progress-btn"
-              disabled={goal.progress === 0}
-            >
-              -1%
-            </button>
-            <div className="progress-display">
-              <div className="progress-percentage">{goal.progress}%</div>
+          <h3>Overall Progress</h3>
+          <div className="progress-display-auto">
+            <div className="progress-percentage-large">{progress}%</div>
+            <div className="progress-details">
+              <p className="progress-text">{completedCount} of {totalCount} milestones completed</p>
               <div className="progress-bar-large">
                 <div 
                   className="progress-fill-large" 
-                  style={{ width: `${goal.progress}%` }}
+                  style={{ width: `${progress}%` }}
                 />
               </div>
             </div>
-            <button 
-              onClick={() => handleProgressChange(Math.min(100, goal.progress + 1))}
-              className="progress-btn"
-              disabled={goal.progress === 100}
-            >
-              +1%
-            </button>
-            <button 
-              onClick={() => handleProgressChange(Math.min(100, goal.progress + 5))}
-              className="progress-btn"
-              disabled={goal.progress === 100}
-            >
-              +5%
-            </button>
           </div>
         </div>
 
         <div className="goal-info-section">
           <h3>Milestones</h3>
-          <div className="milestones-placeholder">
-            <p className="placeholder-text">Milestone tracking coming soon! 🎯</p>
-            <p className="placeholder-subtext">You'll be able to add and track milestones here.</p>
+          {goal.milestones && goal.milestones.length > 0 ? (
+            <div className="milestones-list">
+              {goal.milestones.map((milestone) => (
+                <div key={milestone.id} className="milestone-item">
+                  {editingMilestoneId === milestone.id ? (
+                    <div className="milestone-edit-row">
+                      <input
+                        type="text"
+                        value={editingMilestoneText}
+                        onChange={(e) => setEditingMilestoneText(e.target.value)}
+                        className="milestone-edit-input"
+                        autoFocus
+                      />
+                      <button 
+                        onClick={() => handleSaveMilestone(milestone.id)}
+                        className="milestone-save-btn"
+                      >
+                        ✓
+                      </button>
+                      <button 
+                        onClick={handleCancelEditMilestone}
+                        className="milestone-cancel-btn"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="checkbox"
+                        checked={milestone.completed}
+                        onChange={() => handleToggleMilestone(milestone.id)}
+                        className="milestone-checkbox"
+                      />
+                      <span className={milestone.completed ? 'milestone-text completed' : 'milestone-text'}>
+                        {milestone.text}
+                      </span>
+                      <div className="milestone-actions">
+                        <button
+                          onClick={() => handleStartEditMilestone(milestone)}
+                          className="milestone-edit-btn"
+                          title="Edit milestone"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMilestone(milestone.id)}
+                          className="milestone-delete-btn"
+                          title="Delete milestone"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="no-milestones">No milestones yet. Add some below!</p>
+          )}
+
+          <div className="add-milestone-section">
+            <input
+              type="text"
+              value={newMilestoneText}
+              onChange={(e) => setNewMilestoneText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddMilestone()}
+              placeholder="Add a new milestone..."
+              className="new-milestone-input"
+            />
+            <button
+              onClick={handleAddMilestone}
+              className="add-milestone-btn"
+            >
+              + Add Milestone
+            </button>
           </div>
         </div>
 
@@ -209,7 +301,7 @@ function GoalDetails() {
           <h3>Steps</h3>
           <div className="steps-placeholder">
             <p className="placeholder-text">Step management coming soon! ✅</p>
-            <p className="placeholder-subtext">You'll be able to add, edit, and check off steps here.</p>
+            <p className="placeholder-subtext">Future feature: Break down milestones into smaller, actionable steps.</p>
           </div>
         </div>
       </div>
@@ -218,4 +310,3 @@ function GoalDetails() {
 }
 
 export default GoalDetails
-

@@ -1,8 +1,14 @@
 import { useNavigate } from 'react-router-dom'
+import { calculateProgress } from './services/goalStorage.js'
 import './GoalCard.css'
 
 function GoalCard({ goal }) {
   const navigate = useNavigate()
+
+  // Calculate progress based on milestones
+  const progress = calculateProgress(goal.milestones)
+  const completedCount = goal.milestones?.filter(m => m.completed).length || 0
+  const totalCount = goal.milestones?.length || 0
 
   const handleCardClick = () => {
     console.log('Opening goal details for:', goal.title)
@@ -33,13 +39,13 @@ function GoalCard({ goal }) {
       
       <div className="goal-progress">
         <div className="progress-label">
-          <span>Progress</span>
-          <span>{goal.progress}%</span>
+          <span>Progress ({completedCount}/{totalCount} milestones)</span>
+          <span>{progress}%</span>
         </div>
         <div className="progress-bar">
           <div 
             className="progress-fill" 
-            style={{ width: `${goal.progress}%` }}
+            style={{ width: `${progress}%` }}
           />
         </div>
       </div>

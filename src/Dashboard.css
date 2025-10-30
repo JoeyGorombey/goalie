@@ -111,3 +111,51 @@
   background: #e0e0e0;
 }
 
+.form-help-text {
+  color: #888;
+  font-size: 0.9rem;
+  margin: -0.5rem 0 0.75rem 0;
+}
+
+.step-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.step-input {
+  flex: 1;
+}
+
+.remove-step-btn {
+  padding: 0.75rem 1rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.remove-step-btn:hover {
+  background: #c82333;
+}
+
+.add-step-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #f5f5f5;
+  color: #667eea;
+  border: 2px dashed #667eea;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.add-step-btn:hover {
+  background: #e8ebff;
+  border-color: #5568d3;
+}
+
