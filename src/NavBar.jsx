@@ -17,6 +17,7 @@ function NavBar() {
       </div>
       <div className="navbar-links">
         <Link to="/" className={isActive('/')}>Home</Link>
+        <Link to="/my-goals" className={isActive('/my-goals')}>My Goals</Link>
         <Link to="/wizard" className={isActive('/wizard')}>Goalie Wizard</Link>
         <Link to="/network" className={isActive('/network')}>Network</Link>
         <Link to="/profile" className={isActive('/profile')}>Profile</Link>

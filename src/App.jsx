@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './Dashboard.jsx'
+import MyGoals from './pages/MyGoals.jsx'
 import GoalDetails from './GoalDetails.jsx'
 import GoalieWizard from './pages/GoalieWizard.jsx'
 import Network from './pages/Network.jsx'
@@ -10,6 +11,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/my-goals" element={<MyGoals />} />
         <Route path="/goal/:goalId" element={<GoalDetails />} />
         <Route path="/wizard" element={<GoalieWizard />} />
         <Route path="/network" element={<Network />} />
