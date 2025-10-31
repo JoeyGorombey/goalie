@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 const { db, initializeDatabase, getGoalWithMilestones, getAllGoalsWithMilestones } = require('./db/schema');
 
 const app = express();
@@ -11,6 +13,12 @@ initializeDatabase();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Goalie API Docs',
+}));
 
 // ============================================================================
 // API ROUTES
@@ -40,7 +48,29 @@ app.get('/api', (req, res) => {
 // GOALS ENDPOINTS
 // ============================================================================
 
-// GET all goals
+/**
+ * @swagger
+ * /api/goals:
+ *   get:
+ *     summary: Get all goals
+ *     description: Retrieve all goals with their milestones
+ *     tags: [Goals]
+ *     responses:
+ *       200:
+ *         description: Array of goals with milestones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Goal'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.get('/api/goals', (req, res) => {
   try {
     const goals = getAllGoalsWithMilestones();
@@ -51,7 +81,40 @@ app.get('/api/goals', (req, res) => {
   }
 });
 
-// GET single goal by ID
+/**
+ * @swagger
+ * /api/goals/{id}:
+ *   get:
+ *     summary: Get a single goal by ID
+ *     description: Retrieve a specific goal with all its milestones
+ *     tags: [Goals]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *     responses:
+ *       200:
+ *         description: Goal with milestones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       404:
+ *         description: Goal not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.get('/api/goals/:id', (req, res) => {
   try {
     const goal = getGoalWithMilestones(parseInt(req.params.id));
@@ -67,7 +130,39 @@ app.get('/api/goals/:id', (req, res) => {
   }
 });
 
-// POST create new goal
+/**
+ * @swagger
+ * /api/goals:
+ *   post:
+ *     summary: Create a new goal
+ *     description: Create a new goal with optional milestones
+ *     tags: [Goals]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateGoalRequest'
+ *     responses:
+ *       201:
+ *         description: Goal created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       400:
+ *         description: Invalid request (missing or empty title)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/goals', (req, res) => {
   try {
     const { title, description, dueDate, steps } = req.body;
@@ -114,7 +209,52 @@ app.post('/api/goals', (req, res) => {
   }
 });
 
-// PUT update goal
+/**
+ * @swagger
+ * /api/goals/{id}:
+ *   put:
+ *     summary: Update a goal
+ *     description: Update goal details (title, description, dueDate) or reorder milestones
+ *     tags: [Goals]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateGoalRequest'
+ *     responses:
+ *       200:
+ *         description: Goal updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       400:
+ *         description: Invalid request (missing milestone text)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Goal not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.put('/api/goals/:id', (req, res) => {
   try {
     const goalId = parseInt(req.params.id);
@@ -185,7 +325,44 @@ app.put('/api/goals/:id', (req, res) => {
   }
 });
 
-// DELETE goal
+/**
+ * @swagger
+ * /api/goals/{id}:
+ *   delete:
+ *     summary: Delete a goal
+ *     description: Delete a goal and all its milestones (cascading delete)
+ *     tags: [Goals]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *     responses:
+ *       200:
+ *         description: Goal deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Goal deleted successfully
+ *       404:
+ *         description: Goal not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.delete('/api/goals/:id', (req, res) => {
   try {
     const goalId = parseInt(req.params.id);
@@ -208,7 +385,46 @@ app.delete('/api/goals/:id', (req, res) => {
 // MILESTONES ENDPOINTS
 // ============================================================================
 
-// POST toggle milestone completion
+/**
+ * @swagger
+ * /api/goals/{goalId}/milestones/{milestoneId}/toggle:
+ *   post:
+ *     summary: Toggle milestone completion status
+ *     description: Switch a milestone between completed and not completed
+ *     tags: [Milestones]
+ *     parameters:
+ *       - in: path
+ *         name: goalId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *       - in: path
+ *         name: milestoneId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Milestone ID
+ *     responses:
+ *       200:
+ *         description: Milestone toggled successfully, returns updated goal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       404:
+ *         description: Goal not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/goals/:goalId/milestones/:milestoneId/toggle', (req, res) => {
   try {
     const goalId = parseInt(req.params.goalId);
@@ -235,7 +451,52 @@ app.post('/api/goals/:goalId/milestones/:milestoneId/toggle', (req, res) => {
   }
 });
 
-// POST add milestone
+/**
+ * @swagger
+ * /api/goals/{goalId}/milestones:
+ *   post:
+ *     summary: Add a new milestone to a goal
+ *     description: Create a new milestone for the specified goal
+ *     tags: [Milestones]
+ *     parameters:
+ *       - in: path
+ *         name: goalId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMilestoneRequest'
+ *     responses:
+ *       201:
+ *         description: Milestone created successfully, returns updated goal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       400:
+ *         description: Invalid request (missing or empty milestone text)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Goal not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/goals/:goalId/milestones', (req, res) => {
   try {
     const goalId = parseInt(req.params.goalId);
@@ -272,7 +533,58 @@ app.post('/api/goals/:goalId/milestones', (req, res) => {
   }
 });
 
-// PUT update milestone
+/**
+ * @swagger
+ * /api/goals/{goalId}/milestones/{milestoneId}:
+ *   put:
+ *     summary: Update a milestone
+ *     description: Update milestone text and/or due date
+ *     tags: [Milestones]
+ *     parameters:
+ *       - in: path
+ *         name: goalId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *       - in: path
+ *         name: milestoneId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Milestone ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateMilestoneRequest'
+ *     responses:
+ *       200:
+ *         description: Milestone updated successfully, returns updated goal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       400:
+ *         description: Invalid request (empty milestone text or missing text)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Milestone not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.put('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
   try {
     const goalId = parseInt(req.params.goalId);
@@ -329,7 +641,46 @@ app.put('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
   }
 });
 
-// DELETE milestone
+/**
+ * @swagger
+ * /api/goals/{goalId}/milestones/{milestoneId}:
+ *   delete:
+ *     summary: Delete a milestone
+ *     description: Remove a milestone from a goal
+ *     tags: [Milestones]
+ *     parameters:
+ *       - in: path
+ *         name: goalId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *       - in: path
+ *         name: milestoneId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Milestone ID
+ *     responses:
+ *       200:
+ *         description: Milestone deleted successfully, returns updated goal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       404:
+ *         description: Milestone not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.delete('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
   try {
     const goalId = parseInt(req.params.goalId);
@@ -359,5 +710,6 @@ app.listen(PORT, () => {
   console.log(`\n🥅 Goalie API Server`);
   console.log(`📡 Running on http://localhost:${PORT}`);
   console.log(`🗄️  Database: SQLite (better-sqlite3)`);
-  console.log(`\n📚 API Documentation: http://localhost:${PORT}/api\n`);
+  console.log(`\n📚 Swagger API Docs: http://localhost:${PORT}/api-docs`);
+  console.log(`📋 API Info: http://localhost:${PORT}/api\n`);
 });
