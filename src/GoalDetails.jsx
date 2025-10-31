@@ -28,6 +28,7 @@ import {
   reorderMilestones
 } from './services/goalStorage.js'
 import { useError } from './context/ErrorContext.jsx'
+import { formatDateForInput, parseDateFromInput, formatDateForDisplay } from './utils/dateUtils.js'
 import './GoalDetails.css'
 
 function GoalDetails() {
@@ -114,13 +115,24 @@ function GoalDetails() {
   // Initialize edit form
   useEffect(() => {
     if (goal && isEditing) {
-      setEditedGoal({ ...goal })
+      // Convert date string to YYYY-MM-DD format for date input
+      const goalForEdit = {
+        ...goal,
+        dueDateInput: formatDateForInput(goal.dueDate) // Store in separate field for input
+      }
+      setEditedGoal(goalForEdit)
     }
   }, [isEditing, goal])
 
   const handleSave = async () => {
     try {
-      const updated = await updateGoal(goalId, editedGoal)
+      // Convert date input (YYYY-MM-DD) back to formatted date string
+      const goalToSave = {
+        ...editedGoal,
+        dueDate: parseDateFromInput(editedGoal.dueDateInput || editedGoal.dueDate),
+        dueDateInput: undefined // Remove temporary field
+      }
+      const updated = await updateGoal(goalId, goalToSave)
       setGoal(updated)
       setIsEditing(false)
     } catch (error) {
@@ -245,12 +257,24 @@ function GoalDetails() {
 
           <div className="form-group">
             <label>Due Date</label>
-            <input
-              type="text"
-              value={editedGoal?.dueDate || ''}
-              onChange={(e) => setEditedGoal({...editedGoal, dueDate: e.target.value})}
-              className="edit-input"
-            />
+            <div className="date-input-wrapper">
+              <input
+                type="date"
+                value={editedGoal?.dueDateInput || formatDateForInput(editedGoal?.dueDate) || ''}
+                onChange={(e) => setEditedGoal({...editedGoal, dueDateInput: e.target.value})}
+                className="edit-input date-input"
+              />
+              {(editedGoal?.dueDateInput || editedGoal?.dueDate) && (
+                <button
+                  type="button"
+                  onClick={() => setEditedGoal({...editedGoal, dueDateInput: ''})}
+                  className="clear-date-btn"
+                  title="Clear due date"
+                >
+                  ✕ Clear
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -284,7 +308,7 @@ function GoalDetails() {
 
         <div className="goal-info-section">
           <h3>Due Date</h3>
-          <p className="goal-due-date-full">📅 {goal.dueDate}</p>
+          <p className="goal-due-date-full">📅 {formatDateForDisplay(goal.dueDate)}</p>
         </div>
 
         <div className="goal-info-section">

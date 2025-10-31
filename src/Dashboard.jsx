@@ -4,6 +4,7 @@ import Greeting from './Greeting.jsx'
 import GoalList from './GoalList.jsx'
 import { getAllGoals, addGoal } from './services/goalStorage.js'
 import { useError } from './context/ErrorContext.jsx'
+import { formatDateForInput, parseDateFromInput } from './utils/dateUtils.js'
 import './Dashboard.css'
 
 function Dashboard() {
@@ -65,7 +66,7 @@ function Dashboard() {
 function AddGoalForm({ onSubmit, onCancel }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [dueDate, setDueDate] = useState('')
+  const [dueDate, setDueDate] = useState('') // Stored as YYYY-MM-DD for date input
   const [steps, setSteps] = useState([''])
 
   const handleAddStep = () => {
@@ -93,10 +94,13 @@ function AddGoalForm({ onSubmit, onCancel }) {
     // Filter out empty steps
     const validSteps = steps.filter(step => step.trim() !== '')
     
+    // Convert date input (YYYY-MM-DD) to formatted date string for storage
+    const formattedDueDate = parseDateFromInput(dueDate)
+    
     onSubmit({
       title,
       description,
-      dueDate: dueDate || 'No due date',
+      dueDate: formattedDueDate,
       steps: validSteps
     })
     
@@ -134,12 +138,24 @@ function AddGoalForm({ onSubmit, onCancel }) {
 
         <div className="form-group">
           <label>Due Date</label>
-          <input
-            type="text"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            placeholder="e.g., Dec 31, 2025 or Ongoing"
-          />
+          <div className="date-input-wrapper">
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="date-input"
+            />
+            {dueDate && (
+              <button
+                type="button"
+                onClick={() => setDueDate('')}
+                className="clear-date-btn"
+                title="Clear due date"
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="form-group">

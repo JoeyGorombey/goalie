@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { calculateProgress } from './services/goalStorage.js'
+import { formatDateForDisplay } from './utils/dateUtils.js'
 import './GoalCard.css'
 
 function GoalCard({ goal }) {
@@ -34,7 +35,7 @@ function GoalCard({ goal }) {
       <p className="goal-description">{goal.description}</p>
       
       <div className="goal-due-date">
-        📅 Due: {goal.dueDate}
+        📅 Due: {formatDateForDisplay(goal.dueDate)}
       </div>
       
       <div className="goal-progress">
