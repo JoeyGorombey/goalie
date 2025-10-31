@@ -26,9 +26,9 @@ import {
   deleteMilestone,
   updateMilestone,
   reorderMilestones
-} from './services/goalStorage.js'
-import { useError } from './context/ErrorContext.jsx'
-import { formatDateForInput, parseDateFromInput, formatDateForDisplay } from './utils/dateUtils.js'
+} from '../services/goalStorage.js'
+import { useError } from '../context/ErrorContext.jsx'
+import { formatDateForInput, parseDateFromInput, formatDateForDisplay } from '../utils/dateUtils.js'
 import './GoalDetails.css'
 
 function GoalDetails() {
@@ -44,6 +44,8 @@ function GoalDetails() {
   const [newMilestoneText, setNewMilestoneText] = useState('')
   const [editingMilestoneId, setEditingMilestoneId] = useState(null)
   const [editingMilestoneText, setEditingMilestoneText] = useState('')
+  const [editingMilestoneDateId, setEditingMilestoneDateId] = useState(null)
+  const [editingMilestoneDate, setEditingMilestoneDate] = useState('')
 
   // Drag and drop sensors - add delay to prevent accidental drags when clicking buttons
   const sensors = useSensors(
@@ -91,7 +93,13 @@ function GoalDetails() {
     } catch (error) {
       // Revert on error
       setGoal({ ...originalGoal, milestones: originalMilestones })
-      showError(error.message || 'Failed to reorder milestones. Please try again.')
+      console.error('Failed to reorder milestones:', error)
+      showError(error.message || 'Failed to reorder milestones. The page will reload to fix data issues.')
+      
+      // If the data is corrupted, reload from server
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
     }
   }
 
@@ -102,6 +110,14 @@ function GoalDetails() {
         try {
           const loadedGoal = await getGoalById(goalId)
           if (loadedGoal) {
+            // Validate milestone data
+            if (loadedGoal.milestones) {
+              const corruptedMilestones = loadedGoal.milestones.filter(m => !m.text || m.text.trim() === '')
+              if (corruptedMilestones.length > 0) {
+                console.error('⚠️ Detected corrupted milestones:', corruptedMilestones)
+                showError(`Warning: ${corruptedMilestones.length} milestone(s) are missing text. Please edit them to add descriptions.`)
+              }
+            }
             setGoal(loadedGoal)
           }
         } catch (error) {
@@ -204,6 +220,27 @@ function GoalDetails() {
   const handleCancelEditMilestone = () => {
     setEditingMilestoneId(null)
     setEditingMilestoneText('')
+  }
+
+  const handleStartEditMilestoneDate = (milestone) => {
+    setEditingMilestoneDateId(milestone.id)
+    setEditingMilestoneDate(milestone.dueDate || '')
+  }
+
+  const handleSaveMilestoneDate = async (milestoneId) => {
+    try {
+      const updatedGoal = await updateMilestone(goalId, milestoneId, null, editingMilestoneDate || null)
+      setGoal(updatedGoal)
+      setEditingMilestoneDateId(null)
+      setEditingMilestoneDate('')
+    } catch (error) {
+      showError(error.message || 'Failed to update milestone date. Please try again.')
+    }
+  }
+
+  const handleCancelEditMilestoneDate = () => {
+    setEditingMilestoneDateId(null)
+    setEditingMilestoneDate('')
   }
 
   // If no goal data, show error
@@ -346,12 +383,18 @@ function GoalDetails() {
                       milestone={milestone}
                       editingMilestoneId={editingMilestoneId}
                       editingMilestoneText={editingMilestoneText}
+                      editingMilestoneDateId={editingMilestoneDateId}
+                      editingMilestoneDate={editingMilestoneDate}
                       onToggle={handleToggleMilestone}
                       onStartEdit={handleStartEditMilestone}
                       onSaveEdit={handleSaveMilestone}
                       onCancelEdit={handleCancelEditMilestone}
+                      onStartEditDate={handleStartEditMilestoneDate}
+                      onSaveDateEdit={handleSaveMilestoneDate}
+                      onCancelDateEdit={handleCancelEditMilestoneDate}
                       onDelete={handleDeleteMilestone}
                       onTextChange={setEditingMilestoneText}
+                      onDateChange={setEditingMilestoneDate}
                     />
                   ))}
                 </div>
@@ -396,12 +439,18 @@ function SortableMilestone({
   milestone,
   editingMilestoneId,
   editingMilestoneText,
+  editingMilestoneDateId,
+  editingMilestoneDate,
   onToggle,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
+  onStartEditDate,
+  onSaveDateEdit,
+  onCancelDateEdit,
   onDelete,
   onTextChange,
+  onDateChange,
 }) {
   const {
     attributes,
@@ -446,6 +495,49 @@ function SortableMilestone({
     )
   }
 
+  if (editingMilestoneDateId === milestone.id) {
+    return (
+      <div className="milestone-item">
+        <div className="milestone-edit-row">
+          <span className="milestone-date-label">📅 Set due date:</span>
+          <input
+            type="date"
+            value={editingMilestoneDate || ''}
+            onChange={(e) => onDateChange(e.target.value)}
+            className="milestone-date-input"
+            autoFocus
+          />
+          <button 
+            onClick={() => onSaveDateEdit(milestone.id)}
+            className="milestone-save-btn"
+            title="Save date"
+          >
+            ✓
+          </button>
+          <button 
+            onClick={onCancelDateEdit}
+            className="milestone-cancel-btn"
+            title="Cancel"
+          >
+            ✕
+          </button>
+          {milestone.dueDate && (
+            <button 
+              onClick={() => {
+                onDateChange('')
+                onSaveDateEdit(milestone.id)
+              }}
+              className="milestone-clear-date-btn"
+              title="Clear date"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -467,9 +559,16 @@ function SortableMilestone({
         className="milestone-checkbox"
         onClick={(e) => e.stopPropagation()} // Prevent drag on click
       />
-      <span className={milestone.completed ? 'milestone-text completed' : 'milestone-text'}>
-        {milestone.text}
-      </span>
+      <div className="milestone-content">
+        <span className={milestone.completed ? 'milestone-text completed' : 'milestone-text'}>
+          {milestone.text || 'Untitled milestone'}
+        </span>
+        {milestone.dueDate && milestone.dueDate !== 'No due date' && (
+          <span className="milestone-due-date">
+            Due by {formatDateForDisplay(milestone.dueDate)}
+          </span>
+        )}
+      </div>
       <div className="milestone-actions" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={(e) => {
@@ -480,6 +579,16 @@ function SortableMilestone({
           title="Edit milestone"
         >
           ✏️
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onStartEditDate(milestone)
+          }}
+          className="milestone-calendar-btn"
+          title="Set due date"
+        >
+          📅
         </button>
         <button
           onClick={(e) => {

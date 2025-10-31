@@ -35,21 +35,10 @@
     "milestones": [
       {
         "id": 1,
-        "text": "Implement congratulations component",
-        "completed": false
-      },
-      {
-        "id": 3,
-        "text": "Display other user comments on goals",
-        "completed": false
-      },
-      {
-        "id": 2,
-        "text": "fit page to size",
         "completed": false
       }
     ],
-    "updatedAt": "2025-10-30T23:40:02.238Z"
+    "updatedAt": "2025-10-31T18:18:00.664Z"
   },
   {
     "id": 3,

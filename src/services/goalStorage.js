@@ -153,15 +153,23 @@ export const deleteMilestone = async (goalId, milestoneId) => {
   }
 };
 
-// Update milestone text
-export const updateMilestone = async (goalId, milestoneId, newText) => {
+// Update milestone text and/or date
+export const updateMilestone = async (goalId, milestoneId, newText = null, newDate = null) => {
   try {
+    const updateData = {};
+    if (newText !== null) {
+      updateData.text = newText;
+    }
+    if (newDate !== null) {
+      updateData.dueDate = newDate;
+    }
+
     const response = await fetch(`${API_URL}/goals/${goalId}/milestones/${milestoneId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text: newText }),
+      body: JSON.stringify(updateData),
     });
     
     if (!response.ok) {

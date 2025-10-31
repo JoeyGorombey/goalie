@@ -1,4 +1,4 @@
-import NavBar from '../NavBar.jsx'
+import NavBar from '../components/NavBar.jsx'
 import './Profile.css'
 
 function Profile() {

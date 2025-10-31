@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { calculateProgress } from './services/goalStorage.js'
-import { formatDateForDisplay } from './utils/dateUtils.js'
+import { calculateProgress } from '../services/goalStorage.js'
+import { formatDateForDisplay } from '../utils/dateUtils.js'
 import './GoalCard.css'
 
 function GoalCard({ goal }) {

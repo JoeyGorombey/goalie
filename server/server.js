@@ -1,84 +1,27 @@
 const express = require('express');
-const fs = require('fs').promises;
-const path = require('path');
 const cors = require('cors');
+const { db, initializeDatabase, getGoalWithMilestones, getAllGoalsWithMilestones } = require('./db/schema');
 
 const app = express();
 const PORT = 3001;
-const GOALS_FILE = path.join(__dirname, 'data', 'goals.json');
+
+// Initialize database
+initializeDatabase();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Ensure data directory exists
-const ensureDataDir = async () => {
-  const dataDir = path.join(__dirname, 'data');
-  try {
-    await fs.access(dataDir);
-  } catch {
-    await fs.mkdir(dataDir, { recursive: true });
-  }
-};
-
-// Read goals from file
-const readGoals = async () => {
-  try {
-    await ensureDataDir();
-    const data = await fs.readFile(GOALS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    // If file doesn't exist, return sample data
-    if (error.code === 'ENOENT') {
-      const sampleGoals = [
-        {
-          id: 1,
-          title: "Learn React Fundamentals",
-          description: "Master components, props, state, and hooks to build modern web applications.",
-          dueDate: "Nov 15, 2025",
-          milestones: [
-            { id: 1, text: "Understand components and JSX", completed: true },
-            { id: 2, text: "Learn useState and props", completed: true },
-            { id: 3, text: "Master useEffect and lifecycle", completed: true },
-            { id: 4, text: "Build a full project", completed: false }
-          ]
-        },
-        {
-          id: 2,
-          title: "Build Goalie App",
-          description: "Create a full-stack goal tracking application with React and a database.",
-          dueDate: "Dec 31, 2025",
-          milestones: [
-            { id: 1, text: "Set up React project", completed: true },
-            { id: 2, text: "Create dashboard and components", completed: true },
-            { id: 3, text: "Add local storage", completed: true },
-            { id: 4, text: "Implement milestones feature", completed: true },
-            { id: 5, text: "Create backend with JSON files", completed: false },
-            { id: 6, text: "Connect to real database", completed: false }
-          ]
-        }
-      ];
-      await writeGoals(sampleGoals);
-      return sampleGoals;
-    }
-    throw error;
-  }
-};
-
-// Write goals to file
-const writeGoals = async (goals) => {
-  await ensureDataDir();
-  await fs.writeFile(GOALS_FILE, JSON.stringify(goals, null, 2), 'utf8');
-  console.log(`✅ Goals saved to ${GOALS_FILE}`);
-};
-
-// API Routes
+// ============================================================================
+// API ROUTES
+// ============================================================================
 
 // GET API info
 app.get('/api', (req, res) => {
   res.json({
     message: 'Goalie API is running! 🥅',
-    version: '1.0.0',
+    version: '2.0.0',
+    database: 'SQLite',
     endpoints: {
       'GET /api/goals': 'Get all goals',
       'GET /api/goals/:id': 'Get a single goal by ID',
@@ -93,22 +36,25 @@ app.get('/api', (req, res) => {
   });
 });
 
+// ============================================================================
+// GOALS ENDPOINTS
+// ============================================================================
+
 // GET all goals
-app.get('/api/goals', async (req, res) => {
+app.get('/api/goals', (req, res) => {
   try {
-    const goals = await readGoals();
+    const goals = getAllGoalsWithMilestones();
     res.json(goals);
   } catch (error) {
-    console.error('Error reading goals:', error);
-    res.status(500).json({ error: 'Failed to read goals' });
+    console.error('Error getting goals:', error);
+    res.status(500).json({ error: 'Failed to get goals' });
   }
 });
 
 // GET single goal by ID
-app.get('/api/goals/:id', async (req, res) => {
+app.get('/api/goals/:id', (req, res) => {
   try {
-    const goals = await readGoals();
-    const goal = goals.find(g => g.id === parseInt(req.params.id));
+    const goal = getGoalWithMilestones(parseInt(req.params.id));
     
     if (!goal) {
       return res.status(404).json({ error: 'Goal not found' });
@@ -116,39 +62,50 @@ app.get('/api/goals/:id', async (req, res) => {
     
     res.json(goal);
   } catch (error) {
-    console.error('Error reading goal:', error);
-    res.status(500).json({ error: 'Failed to read goal' });
+    console.error('Error getting goal:', error);
+    res.status(500).json({ error: 'Failed to get goal' });
   }
 });
 
 // POST create new goal
-app.post('/api/goals', async (req, res) => {
+app.post('/api/goals', (req, res) => {
   try {
-    const goals = await readGoals();
+    const { title, description, dueDate, steps } = req.body;
+
+    if (!title || title.trim() === '') {
+      return res.status(400).json({ error: 'Goal title is required' });
+    }
+
+    // Insert goal
+    const insertGoal = db.prepare(`
+      INSERT INTO goals (title, description, dueDate)
+      VALUES (?, ?, ?)
+    `);
     
-    // Generate new ID
-    const newId = goals.length > 0 
-      ? Math.max(...goals.map(g => g.id)) + 1 
-      : 1;
-    
-    // Convert steps to milestones
-    const milestones = (req.body.steps || []).map((step, index) => ({
-      id: index + 1,
-      text: step,
-      completed: false
-    }));
-    
-    const newGoal = {
-      id: newId,
-      title: req.body.title || "Untitled Goal",
-      description: req.body.description || "",
-      dueDate: req.body.dueDate || "No due date",
-      milestones: milestones,
-      createdAt: new Date().toISOString()
-    };
-    
-    goals.push(newGoal);
-    await writeGoals(goals);
+    const result = insertGoal.run(
+      title.trim(),
+      description?.trim() || '',
+      dueDate || null
+    );
+
+    const goalId = result.lastInsertRowid;
+
+    // Insert milestones if provided
+    if (steps && steps.length > 0) {
+      const insertMilestone = db.prepare(`
+        INSERT INTO milestones (goalId, text, completed, position)
+        VALUES (?, ?, 0, ?)
+      `);
+
+      steps.forEach((step, index) => {
+        if (step.trim() !== '') {
+          insertMilestone.run(goalId, step.trim(), index);
+        }
+      });
+    }
+
+    const newGoal = getGoalWithMilestones(goalId);
+    console.log(`✅ Created goal ${goalId}: "${title}"`);
     
     res.status(201).json(newGoal);
   } catch (error) {
@@ -158,23 +115,70 @@ app.post('/api/goals', async (req, res) => {
 });
 
 // PUT update goal
-app.put('/api/goals/:id', async (req, res) => {
+app.put('/api/goals/:id', (req, res) => {
   try {
-    const goals = await readGoals();
-    const goalIndex = goals.findIndex(g => g.id === parseInt(req.params.id));
-    
-    if (goalIndex === -1) {
+    const goalId = parseInt(req.params.id);
+    const { title, description, dueDate, milestones } = req.body;
+
+    // Check if goal exists
+    const existingGoal = db.prepare('SELECT id FROM goals WHERE id = ?').get(goalId);
+    if (!existingGoal) {
       return res.status(404).json({ error: 'Goal not found' });
     }
+
+    // If updating milestones order
+    if (milestones) {
+      // Validate all milestones have text
+      const invalidMilestones = milestones.filter(m => !m.text || m.text.trim() === '');
+      if (invalidMilestones.length > 0) {
+        console.error('❌ Attempted to save milestones without text:', invalidMilestones);
+        return res.status(400).json({ 
+          error: 'Invalid milestone data: all milestones must have text',
+          invalidMilestones: invalidMilestones.map(m => m.id)
+        });
+      }
+
+      // Update milestone positions
+      const updatePosition = db.prepare(`
+        UPDATE milestones 
+        SET position = ? 
+        WHERE id = ? AND goalId = ?
+      `);
+
+      milestones.forEach((milestone, index) => {
+        updatePosition.run(index, milestone.id, goalId);
+      });
+    }
+
+    // Update goal fields if provided
+    if (title !== undefined || description !== undefined || dueDate !== undefined) {
+      const updates = [];
+      const values = [];
+
+      if (title !== undefined) {
+        updates.push('title = ?');
+        values.push(title.trim());
+      }
+      if (description !== undefined) {
+        updates.push('description = ?');
+        values.push(description.trim());
+      }
+      if (dueDate !== undefined) {
+        updates.push('dueDate = ?');
+        values.push(dueDate || null);
+      }
+
+      updates.push('updatedAt = datetime("now")');
+      values.push(goalId);
+
+      const sql = `UPDATE goals SET ${updates.join(', ')} WHERE id = ?`;
+      db.prepare(sql).run(...values);
+    }
+
+    const updatedGoal = getGoalWithMilestones(goalId);
+    console.log(`✅ Updated goal ${goalId}`);
     
-    goals[goalIndex] = {
-      ...goals[goalIndex],
-      ...req.body,
-      updatedAt: new Date().toISOString()
-    };
-    
-    await writeGoals(goals);
-    res.json(goals[goalIndex]);
+    res.json(updatedGoal);
   } catch (error) {
     console.error('Error updating goal:', error);
     res.status(500).json({ error: 'Failed to update goal' });
@@ -182,16 +186,17 @@ app.put('/api/goals/:id', async (req, res) => {
 });
 
 // DELETE goal
-app.delete('/api/goals/:id', async (req, res) => {
+app.delete('/api/goals/:id', (req, res) => {
   try {
-    const goals = await readGoals();
-    const filteredGoals = goals.filter(g => g.id !== parseInt(req.params.id));
+    const goalId = parseInt(req.params.id);
     
-    if (filteredGoals.length === goals.length) {
+    const result = db.prepare('DELETE FROM goals WHERE id = ?').run(goalId);
+    
+    if (result.changes === 0) {
       return res.status(404).json({ error: 'Goal not found' });
     }
-    
-    await writeGoals(filteredGoals);
+
+    console.log(`✅ Deleted goal ${goalId}`);
     res.json({ message: 'Goal deleted successfully' });
   } catch (error) {
     console.error('Error deleting goal:', error);
@@ -199,25 +204,31 @@ app.delete('/api/goals/:id', async (req, res) => {
   }
 });
 
-// POST toggle milestone
-app.post('/api/goals/:goalId/milestones/:milestoneId/toggle', async (req, res) => {
+// ============================================================================
+// MILESTONES ENDPOINTS
+// ============================================================================
+
+// POST toggle milestone completion
+app.post('/api/goals/:goalId/milestones/:milestoneId/toggle', (req, res) => {
   try {
-    const goals = await readGoals();
-    const goal = goals.find(g => g.id === parseInt(req.params.goalId));
+    const goalId = parseInt(req.params.goalId);
+    const milestoneId = parseInt(req.params.milestoneId);
+
+    // Toggle completion status
+    db.prepare(`
+      UPDATE milestones 
+      SET completed = NOT completed 
+      WHERE id = ? AND goalId = ?
+    `).run(milestoneId, goalId);
+
+    const updatedGoal = getGoalWithMilestones(goalId);
     
-    if (!goal || !goal.milestones) {
+    if (!updatedGoal) {
       return res.status(404).json({ error: 'Goal not found' });
     }
-    
-    const milestone = goal.milestones.find(m => m.id === parseInt(req.params.milestoneId));
-    if (!milestone) {
-      return res.status(404).json({ error: 'Milestone not found' });
-    }
-    
-    milestone.completed = !milestone.completed;
-    
-    await writeGoals(goals);
-    res.json(goal);
+
+    console.log(`✅ Toggled milestone ${milestoneId}`);
+    res.json(updatedGoal);
   } catch (error) {
     console.error('Error toggling milestone:', error);
     res.status(500).json({ error: 'Failed to toggle milestone' });
@@ -225,31 +236,36 @@ app.post('/api/goals/:goalId/milestones/:milestoneId/toggle', async (req, res) =
 });
 
 // POST add milestone
-app.post('/api/goals/:goalId/milestones', async (req, res) => {
+app.post('/api/goals/:goalId/milestones', (req, res) => {
   try {
-    const goals = await readGoals();
-    const goal = goals.find(g => g.id === parseInt(req.params.goalId));
-    
+    const goalId = parseInt(req.params.goalId);
+    const { text } = req.body;
+
+    // Validate milestone text
+    if (!text || text.trim() === '') {
+      return res.status(400).json({ error: 'Milestone text is required' });
+    }
+
+    // Check if goal exists
+    const goal = db.prepare('SELECT id FROM goals WHERE id = ?').get(goalId);
     if (!goal) {
       return res.status(404).json({ error: 'Goal not found' });
     }
+
+    // Get max position
+    const maxPos = db.prepare('SELECT MAX(position) as max FROM milestones WHERE goalId = ?').get(goalId);
+    const position = (maxPos.max !== null ? maxPos.max : -1) + 1;
+
+    // Insert milestone
+    db.prepare(`
+      INSERT INTO milestones (goalId, text, completed, position)
+      VALUES (?, ?, 0, ?)
+    `).run(goalId, text.trim(), position);
+
+    const updatedGoal = getGoalWithMilestones(goalId);
+    console.log(`✅ Added milestone to goal ${goalId}`);
     
-    if (!goal.milestones) goal.milestones = [];
-    
-    const newId = goal.milestones.length > 0
-      ? Math.max(...goal.milestones.map(m => m.id)) + 1
-      : 1;
-    
-    const newMilestone = {
-      id: newId,
-      text: req.body.text,
-      completed: false
-    };
-    
-    goal.milestones.push(newMilestone);
-    await writeGoals(goals);
-    
-    res.status(201).json(goal);
+    res.status(201).json(updatedGoal);
   } catch (error) {
     console.error('Error adding milestone:', error);
     res.status(500).json({ error: 'Failed to add milestone' });
@@ -257,24 +273,56 @@ app.post('/api/goals/:goalId/milestones', async (req, res) => {
 });
 
 // PUT update milestone
-app.put('/api/goals/:goalId/milestones/:milestoneId', async (req, res) => {
+app.put('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
   try {
-    const goals = await readGoals();
-    const goal = goals.find(g => g.id === parseInt(req.params.goalId));
+    const goalId = parseInt(req.params.goalId);
+    const milestoneId = parseInt(req.params.milestoneId);
+    const { text, dueDate } = req.body;
+
+    // Check if milestone exists
+    const milestone = db.prepare('SELECT * FROM milestones WHERE id = ? AND goalId = ?').get(milestoneId, goalId);
     
-    if (!goal || !goal.milestones) {
-      return res.status(404).json({ error: 'Goal not found' });
-    }
-    
-    const milestone = goal.milestones.find(m => m.id === parseInt(req.params.milestoneId));
     if (!milestone) {
       return res.status(404).json({ error: 'Milestone not found' });
     }
+
+    // Validate milestone has text before updating
+    if (!milestone.text && text === undefined) {
+      console.warn(`⚠️  Warning: Milestone ${milestoneId} is missing text property!`);
+      return res.status(400).json({ 
+        error: 'Cannot update milestone: missing text. Please edit the milestone text first.' 
+      });
+    }
+
+    const updates = [];
+    const values = [];
+
+    // Update text if provided
+    if (text !== undefined) {
+      const trimmedText = text.trim();
+      if (trimmedText === '') {
+        return res.status(400).json({ error: 'Milestone text cannot be empty' });
+      }
+      updates.push('text = ?');
+      values.push(trimmedText);
+    }
+
+    // Update dueDate if provided (null to clear)
+    if (dueDate !== undefined) {
+      updates.push('dueDate = ?');
+      values.push(dueDate || null);
+    }
+
+    if (updates.length > 0) {
+      values.push(milestoneId, goalId);
+      const sql = `UPDATE milestones SET ${updates.join(', ')} WHERE id = ? AND goalId = ?`;
+      db.prepare(sql).run(...values);
+    }
+
+    const updatedGoal = getGoalWithMilestones(goalId);
+    console.log(`✅ Updated milestone ${milestoneId}:`, { text, dueDate });
     
-    milestone.text = req.body.text;
-    await writeGoals(goals);
-    
-    res.json(goal);
+    res.json(updatedGoal);
   } catch (error) {
     console.error('Error updating milestone:', error);
     res.status(500).json({ error: 'Failed to update milestone' });
@@ -282,28 +330,34 @@ app.put('/api/goals/:goalId/milestones/:milestoneId', async (req, res) => {
 });
 
 // DELETE milestone
-app.delete('/api/goals/:goalId/milestones/:milestoneId', async (req, res) => {
+app.delete('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
   try {
-    const goals = await readGoals();
-    const goal = goals.find(g => g.id === parseInt(req.params.goalId));
+    const goalId = parseInt(req.params.goalId);
+    const milestoneId = parseInt(req.params.milestoneId);
+
+    const result = db.prepare('DELETE FROM milestones WHERE id = ? AND goalId = ?').run(milestoneId, goalId);
     
-    if (!goal || !goal.milestones) {
-      return res.status(404).json({ error: 'Goal not found' });
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Milestone not found' });
     }
+
+    const updatedGoal = getGoalWithMilestones(goalId);
+    console.log(`✅ Deleted milestone ${milestoneId}`);
     
-    goal.milestones = goal.milestones.filter(m => m.id !== parseInt(req.params.milestoneId));
-    await writeGoals(goals);
-    
-    res.json(goal);
+    res.json(updatedGoal);
   } catch (error) {
     console.error('Error deleting milestone:', error);
     res.status(500).json({ error: 'Failed to delete milestone' });
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📁 Goals file: ${GOALS_FILE}`);
-});
+// ============================================================================
+// START SERVER
+// ============================================================================
 
+app.listen(PORT, () => {
+  console.log(`\n🥅 Goalie API Server`);
+  console.log(`📡 Running on http://localhost:${PORT}`);
+  console.log(`🗄️  Database: SQLite (better-sqlite3)`);
+  console.log(`\n📚 API Documentation: http://localhost:${PORT}/api\n`);
+});
