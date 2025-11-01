@@ -202,3 +202,22 @@ export const reorderMilestones = async (goalId, reorderedMilestones) => {
     throw error;
   }
 };
+
+export const completeGoal = async (goalId) => {
+  try {
+    const response = await fetch(`${API_URL}/goals/${goalId}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to mark goal as completed: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error completing goal:', error);
+    throw error;
+  }
+};

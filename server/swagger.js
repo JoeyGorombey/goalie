@@ -53,6 +53,12 @@ const options = {
               description: 'Due date in human-readable format',
               example: 'Dec 31, 2025',
             },
+            status: {
+              type: 'string',
+              enum: ['active', 'completed'],
+              description: 'Goal status',
+              example: 'active',
+            },
             milestones: {
               type: 'array',
               description: 'Array of milestones for this goal',

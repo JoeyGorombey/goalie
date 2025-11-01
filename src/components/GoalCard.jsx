@@ -11,6 +11,31 @@ function GoalCard({ goal }) {
   const completedCount = goal.milestones?.filter(m => m.completed).length || 0
   const totalCount = goal.milestones?.length || 0
 
+  // Determine goal display status
+  const getGoalStatus = () => {
+    if (goal.status === 'completed') {
+      return { text: 'Completed', class: 'status-completed', emoji: '✅' }
+    }
+    
+    // Check if overdue
+    if (goal.dueDate && goal.dueDate !== 'No due date') {
+      try {
+        const dueDate = new Date(goal.dueDate)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        if (dueDate < today) {
+          return { text: 'Overdue', class: 'status-overdue', emoji: '⚠️' }
+        }
+      } catch (e) {
+        console.error('Error parsing due date:', e)
+      }
+    }
+    
+    return { text: 'Active', class: 'status-active', emoji: '🎯' }
+  }
+
+  const statusInfo = getGoalStatus()
+
   const handleCardClick = () => {
     console.log('Opening goal details for:', goal.title)
     // Navigate to goal details page, passing the goal data
@@ -31,6 +56,10 @@ function GoalCard({ goal }) {
           ⋮
         </button>
       </div>
+      
+      <span className={`goal-card-status ${statusInfo.class}`}>
+        {statusInfo.emoji} {statusInfo.text}
+      </span>
       
       <p className="goal-description">{goal.description}</p>
       

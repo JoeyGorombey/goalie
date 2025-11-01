@@ -381,6 +381,67 @@ app.delete('/api/goals/:id', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/goals/{id}/complete:
+ *   post:
+ *     summary: Mark a goal as completed
+ *     description: Update goal status to 'completed' when all milestones are done
+ *     tags: [Goals]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Goal ID
+ *     responses:
+ *       200:
+ *         description: Goal marked as completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Goal'
+ *       404:
+ *         description: Goal not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/api/goals/:id/complete', (req, res) => {
+  try {
+    const goalId = parseInt(req.params.id);
+
+    // Check if goal exists
+    const goal = db.prepare('SELECT * FROM goals WHERE id = ?').get(goalId);
+    if (!goal) {
+      return res.status(404).json({ error: 'Goal not found' });
+    }
+
+    // Update status to completed
+    db.prepare(`
+      UPDATE goals 
+      SET status = 'completed', updatedAt = datetime('now')
+      WHERE id = ?
+    `).run(goalId);
+
+    const updatedGoal = getGoalWithMilestones(goalId);
+    console.log(`🎉 Goal ${goalId} marked as completed!`);
+    
+    res.json(updatedGoal);
+  } catch (error) {
+    console.error('Error marking goal as completed:', error);
+    res.status(500).json({ error: 'Failed to mark goal as completed' });
+  }
+});
+
 // ============================================================================
 // MILESTONES ENDPOINTS
 // ============================================================================

@@ -25,7 +25,8 @@ import {
   addMilestone,
   deleteMilestone,
   updateMilestone,
-  reorderMilestones
+  reorderMilestones,
+  completeGoal
 } from '../services/goalStorage.js'
 import { useError } from '../context/ErrorContext.jsx'
 import { formatDateForInput, parseDateFromInput, formatDateForDisplay } from '../utils/dateUtils.js'
@@ -46,6 +47,8 @@ function GoalDetails() {
   const [editingMilestoneText, setEditingMilestoneText] = useState('')
   const [editingMilestoneDateId, setEditingMilestoneDateId] = useState(null)
   const [editingMilestoneDate, setEditingMilestoneDate] = useState('')
+  const [showCongrats, setShowCongrats] = useState(false)
+  const [hasShownCongrats, setHasShownCongrats] = useState(false)
 
   // Drag and drop sensors - add delay to prevent accidental drags when clicking buttons
   const sensors = useSensors(
@@ -139,6 +142,31 @@ function GoalDetails() {
       setEditedGoal(goalForEdit)
     }
   }, [isEditing, goal])
+
+  // Detect 100% completion and show congratulations
+  useEffect(() => {
+    const handleGoalCompletion = async () => {
+      if (goal && goal.milestones && goal.milestones.length > 0) {
+        const progress = calculateProgress(goal.milestones)
+        // Check if goal reached 100% and isn't already marked as completed
+        if (progress === 100 && goal.status !== 'completed' && !hasShownCongrats) {
+          try {
+            // Mark goal as completed in database first
+            const updatedGoal = await completeGoal(goalId)
+            setGoal(updatedGoal)
+            // Then show celebration
+            setShowCongrats(true)
+            setHasShownCongrats(true)
+          } catch (error) {
+            console.error('Error completing goal:', error)
+            showError('Failed to mark goal as completed')
+          }
+        }
+      }
+    }
+    
+    handleGoalCompletion()
+  }, [goal, hasShownCongrats, goalId, showError])
 
   const handleSave = async () => {
     try {
@@ -243,6 +271,34 @@ function GoalDetails() {
     setEditingMilestoneDate('')
   }
 
+  const handleCloseCongrats = () => {
+    setShowCongrats(false)
+  }
+
+  const handleShare = () => {
+    const completedMilestones = goal.milestones?.filter(m => m.completed).length || 0
+    const shareText = `🎉 I just completed my goal: "${goal.title}"! ${completedMilestones} milestones achieved! #GoalieApp #GoalCompleted`
+    
+    // Try native share API first (mobile/modern browsers)
+    if (navigator.share) {
+      navigator.share({
+        title: `Goal Completed: ${goal.title}`,
+        text: shareText,
+        url: window.location.href,
+      }).catch((err) => console.log('Share cancelled', err))
+    } else {
+      // Fallback: Copy to clipboard
+      navigator.clipboard.writeText(shareText + '\n\n' + window.location.href)
+        .then(() => {
+          alert('✅ Achievement copied to clipboard! Share it with your friends!')
+        })
+        .catch(() => {
+          // Ultimate fallback: Show text to copy
+          prompt('Copy this achievement text:', shareText + '\n\n' + window.location.href)
+        })
+    }
+  }
+
   // If no goal data, show error
   if (!goal) {
     return (
@@ -257,6 +313,31 @@ function GoalDetails() {
   const progress = calculateProgress(goal.milestones)
   const completedCount = goal.milestones?.filter(m => m.completed).length || 0
   const totalCount = goal.milestones?.length || 0
+
+  // Determine goal display status
+  const getGoalStatus = () => {
+    if (goal.status === 'completed') {
+      return { text: 'Completed', class: 'status-completed', emoji: '✅' }
+    }
+    
+    // Check if overdue
+    if (goal.dueDate && goal.dueDate !== 'No due date') {
+      try {
+        const dueDate = new Date(goal.dueDate)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        if (dueDate < today) {
+          return { text: 'Overdue', class: 'status-overdue', emoji: '⚠️' }
+        }
+      } catch (e) {
+        console.error('Error parsing due date:', e)
+      }
+    }
+    
+    return { text: 'Active', class: 'status-active', emoji: '🎯' }
+  }
+
+  const statusInfo = getGoalStatus()
 
   // Editing mode
   if (isEditing) {
@@ -336,7 +417,12 @@ function GoalDetails() {
       </div>
 
       <div className="goal-details-content">
-        <h1 className="goal-title">{goal.title}</h1>
+        <div className="goal-header-with-status">
+          <h1 className="goal-title">{goal.title}</h1>
+          <span className={`goal-status-badge ${statusInfo.class}`}>
+            {statusInfo.emoji} {statusInfo.text}
+          </span>
+        </div>
         
         <div className="goal-info-section">
           <h3>Description</h3>
@@ -430,6 +516,41 @@ function GoalDetails() {
           </div>
         </div>
       </div>
+
+      {/* Congratulations Modal */}
+      {showCongrats && (
+        <div className="congrats-overlay" onClick={handleCloseCongrats}>
+          <div className="congrats-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="congrats-confetti">🎉 🎊 ✨ 🏆 🎯 ⭐</div>
+            <h1 className="congrats-title">Congratulations! 🎉</h1>
+            <p className="congrats-message">
+              You've completed all milestones for<br />
+              <strong>"{goal.title}"</strong>!
+            </p>
+            <div className="congrats-stats">
+              <div className="congrats-stat-item">
+                <div className="congrats-stat-value">{completedCount}</div>
+                <div className="congrats-stat-label">Milestones</div>
+              </div>
+              <div className="congrats-stat-item">
+                <div className="congrats-stat-value">100%</div>
+                <div className="congrats-stat-label">Complete</div>
+              </div>
+            </div>
+            <p className="congrats-subtext">
+              Amazing work! Share your achievement with others! 🚀
+            </p>
+            <div className="congrats-actions">
+              <button className="congrats-btn congrats-btn-share" onClick={handleShare}>
+                📢 Share Achievement
+              </button>
+              <button className="congrats-btn congrats-btn-continue" onClick={handleCloseCongrats}>
+                ✨ Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -19,6 +19,7 @@ function initializeDatabase() {
       title TEXT NOT NULL,
       description TEXT,
       dueDate TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'completed')),
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
     )
