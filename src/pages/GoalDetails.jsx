@@ -47,8 +47,16 @@ function GoalDetails() {
   const [editingMilestoneText, setEditingMilestoneText] = useState('')
   const [editingMilestoneDateId, setEditingMilestoneDateId] = useState(null)
   const [editingMilestoneDate, setEditingMilestoneDate] = useState('')
+  const [editingGoalDate, setEditingGoalDate] = useState(false)
+  const [editingGoalDateValue, setEditingGoalDateValue] = useState('')
   const [showCongrats, setShowCongrats] = useState(false)
   const [hasShownCongrats, setHasShownCongrats] = useState(false)
+
+  // Get today's date in YYYY-MM-DD format for min date
+  const getTodayDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
+  }
 
   // Drag and drop sensors - add delay to prevent accidental drags when clicking buttons
   const sensors = useSensors(
@@ -271,6 +279,28 @@ function GoalDetails() {
     setEditingMilestoneDate('')
   }
 
+  const handleStartEditGoalDate = () => {
+    setEditingGoalDate(true)
+    setEditingGoalDateValue(formatDateForInput(goal.dueDate) || '')
+  }
+
+  const handleSaveGoalDate = async () => {
+    try {
+      const formattedDate = parseDateFromInput(editingGoalDateValue)
+      const updated = await updateGoal(goalId, { ...goal, dueDate: formattedDate })
+      setGoal(updated)
+      setEditingGoalDate(false)
+      setEditingGoalDateValue('')
+    } catch (error) {
+      showError(error.message || 'Failed to update goal due date. Please try again.')
+    }
+  }
+
+  const handleCancelEditGoalDate = () => {
+    setEditingGoalDate(false)
+    setEditingGoalDateValue('')
+  }
+
   const handleCloseCongrats = () => {
     setShowCongrats(false)
   }
@@ -314,27 +344,104 @@ function GoalDetails() {
   const completedCount = goal.milestones?.filter(m => m.completed).length || 0
   const totalCount = goal.milestones?.length || 0
 
+  // Helper function to check if milestone is overdue
+  const isMilestoneOverdue = (milestone) => {
+    if (!milestone.dueDate || milestone.completed) return false
+    try {
+      const dueDate = new Date(milestone.dueDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      return dueDate < today
+    } catch (e) {
+      return false
+    }
+  }
+
+  // Sort milestones by date (date first, then by position)
+  const getSortedMilestones = () => {
+    if (!goal.milestones) return []
+    
+    const milestonesWithDates = goal.milestones.filter(m => m.dueDate)
+    const milestonesWithoutDates = goal.milestones.filter(m => !m.dueDate)
+    
+    // Sort milestones with dates by date
+    milestonesWithDates.sort((a, b) => {
+      try {
+        const dateA = new Date(a.dueDate)
+        const dateB = new Date(b.dueDate)
+        return dateA - dateB
+      } catch (e) {
+        return 0
+      }
+    })
+    
+    // Return dated milestones first, then undated ones
+    return [...milestonesWithDates, ...milestonesWithoutDates]
+  }
+
+  const sortedMilestones = getSortedMilestones()
+
   // Determine goal display status
   const getGoalStatus = () => {
     if (goal.status === 'completed') {
-      return { text: 'Completed', class: 'status-completed', emoji: '✅' }
+      return { 
+        primary: 'Completed', 
+        secondary: null,
+        class: 'status-completed', 
+        emoji: '✅' 
+      }
     }
     
-    // Check if overdue
+    // Check if any incomplete milestones are overdue (behind)
+    const hasBehindMilestones = goal.milestones?.some(m => isMilestoneOverdue(m))
+    
+    // Check if goal itself is overdue (late)
+    let isGoalOverdue = false
     if (goal.dueDate && goal.dueDate !== 'No due date') {
       try {
         const dueDate = new Date(goal.dueDate)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        if (dueDate < today) {
-          return { text: 'Overdue', class: 'status-overdue', emoji: '⚠️' }
-        }
+        isGoalOverdue = dueDate < today
       } catch (e) {
         console.error('Error parsing due date:', e)
       }
     }
     
-    return { text: 'Active', class: 'status-active', emoji: '🎯' }
+    // Determine secondary status
+    if (isGoalOverdue && hasBehindMilestones) {
+      return { 
+        primary: 'Active', 
+        secondary: 'Late & Behind',
+        class: 'status-late-behind', 
+        emoji: '🚨' 
+      }
+    }
+    
+    if (isGoalOverdue) {
+      return { 
+        primary: 'Active', 
+        secondary: 'Late',
+        class: 'status-late', 
+        emoji: '⚠️' 
+      }
+    }
+    
+    if (hasBehindMilestones) {
+      return { 
+        primary: 'Active', 
+        secondary: 'Behind Schedule',
+        class: 'status-behind', 
+        emoji: '⏰' 
+      }
+    }
+    
+    return { 
+      primary: 'Active', 
+      secondary: 'On Track',
+      class: 'status-active', 
+      emoji: '🎯' 
+    }
   }
 
   const statusInfo = getGoalStatus()
@@ -379,6 +486,7 @@ function GoalDetails() {
               <input
                 type="date"
                 value={editedGoal?.dueDateInput || formatDateForInput(editedGoal?.dueDate) || ''}
+                min={getTodayDate()}
                 onChange={(e) => setEditedGoal({...editedGoal, dueDateInput: e.target.value})}
                 className="edit-input date-input"
               />
@@ -419,9 +527,11 @@ function GoalDetails() {
       <div className="goal-details-content">
         <div className="goal-header-with-status">
           <h1 className="goal-title">{goal.title}</h1>
-          <span className={`goal-status-badge ${statusInfo.class}`}>
-            {statusInfo.emoji} {statusInfo.text}
-          </span>
+          <div className="goal-status-badges">
+            <span className={`goal-status-badge ${statusInfo.class}`}>
+              {statusInfo.emoji} {statusInfo.secondary || statusInfo.primary}
+            </span>
+          </div>
         </div>
         
         <div className="goal-info-section">
@@ -431,7 +541,56 @@ function GoalDetails() {
 
         <div className="goal-info-section">
           <h3>Due Date</h3>
-          <p className="goal-due-date-full">📅 {formatDateForDisplay(goal.dueDate)}</p>
+          {editingGoalDate ? (
+            <div className="goal-date-edit-row">
+              <span className="goal-date-label">📅 Set due date:</span>
+              <input
+                type="date"
+                value={editingGoalDateValue || ''}
+                min={getTodayDate()}
+                onChange={(e) => setEditingGoalDateValue(e.target.value)}
+                className="goal-date-input"
+                autoFocus
+              />
+              <button 
+                onClick={handleSaveGoalDate}
+                className="goal-date-save-btn"
+                title="Save date"
+              >
+                ✓
+              </button>
+              <button 
+                onClick={handleCancelEditGoalDate}
+                className="goal-date-cancel-btn"
+                title="Cancel"
+              >
+                ✕
+              </button>
+              {goal.dueDate && goal.dueDate !== 'No due date' && (
+                <button 
+                  onClick={() => {
+                    setEditingGoalDateValue('')
+                    handleSaveGoalDate()
+                  }}
+                  className="goal-date-clear-btn"
+                  title="Clear date"
+                >
+                  🗑️ Clear
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="goal-due-date-display">
+              <p className="goal-due-date-full">📅 {formatDateForDisplay(goal.dueDate)}</p>
+              <button
+                onClick={handleStartEditGoalDate}
+                className="goal-date-edit-btn"
+                title="Edit due date"
+              >
+                ✏️ Edit Date
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="goal-info-section">
@@ -451,22 +610,23 @@ function GoalDetails() {
         </div>
 
         <div className="goal-info-section">
-          <h3>Milestones</h3>
-          {goal.milestones && goal.milestones.length > 0 ? (
+          <h3>Milestones {sortedMilestones.length > 0 && <span className="milestone-sort-note">(sorted by due date)</span>}</h3>
+          {sortedMilestones && sortedMilestones.length > 0 ? (
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={goal.milestones.map(m => m.id)}
+                items={sortedMilestones.map(m => m.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="milestones-list">
-                  {goal.milestones.map((milestone) => (
+                  {sortedMilestones.map((milestone) => (
                     <SortableMilestone
                       key={milestone.id}
                       milestone={milestone}
+                      isOverdue={isMilestoneOverdue(milestone)}
                       editingMilestoneId={editingMilestoneId}
                       editingMilestoneText={editingMilestoneText}
                       editingMilestoneDateId={editingMilestoneDateId}
@@ -558,6 +718,7 @@ function GoalDetails() {
 // Sortable Milestone Component
 function SortableMilestone({
   milestone,
+  isOverdue,
   editingMilestoneId,
   editingMilestoneText,
   editingMilestoneDateId,
@@ -617,6 +778,9 @@ function SortableMilestone({
   }
 
   if (editingMilestoneDateId === milestone.id) {
+    // Get today's date for min attribute
+    const today = new Date().toISOString().split('T')[0]
+    
     return (
       <div className="milestone-item">
         <div className="milestone-edit-row">
@@ -624,6 +788,7 @@ function SortableMilestone({
           <input
             type="date"
             value={editingMilestoneDate || ''}
+            min={today}
             onChange={(e) => onDateChange(e.target.value)}
             className="milestone-date-input"
             autoFocus
@@ -663,7 +828,7 @@ function SortableMilestone({
     <div
       ref={setNodeRef}
       style={style}
-      className={`milestone-item ${isDragging ? 'dragging' : ''}`}
+      className={`milestone-item ${isDragging ? 'dragging' : ''} ${isOverdue ? 'milestone-overdue' : ''}`}
       {...attributes}
       {...listeners}
     >
@@ -682,11 +847,12 @@ function SortableMilestone({
       />
       <div className="milestone-content">
         <span className={milestone.completed ? 'milestone-text completed' : 'milestone-text'}>
+          {isOverdue && <span className="overdue-flag">⚠️ </span>}
           {milestone.text || 'Untitled milestone'}
         </span>
         {milestone.dueDate && milestone.dueDate !== 'No due date' && (
-          <span className="milestone-due-date">
-            Due by {formatDateForDisplay(milestone.dueDate)}
+          <span className={`milestone-due-date ${isOverdue ? 'overdue' : ''}`}>
+            {isOverdue ? 'Overdue: ' : 'Due by '}{formatDateForDisplay(milestone.dueDate)}
           </span>
         )}
       </div>

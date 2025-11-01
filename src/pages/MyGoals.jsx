@@ -4,6 +4,7 @@ import Greeting from '../components/Greeting.jsx'
 import GoalList from '../components/GoalList.jsx'
 import { getAllGoals, addGoal } from '../services/goalStorage.js'
 import { useError } from '../context/ErrorContext.jsx'
+import { parseDateFromInput } from '../utils/dateUtils.js'
 import './MyGoals.css'
 
 function MyGoals() {
@@ -93,10 +94,13 @@ function AddGoalForm({ onSubmit, onCancel }) {
     // Filter out empty steps
     const validSteps = steps.filter(step => step.trim() !== '')
     
+    // Convert date input (YYYY-MM-DD) to formatted date string for storage
+    const formattedDueDate = parseDateFromInput(dueDate)
+    
     onSubmit({
       title,
       description,
-      dueDate: dueDate || 'No due date',
+      dueDate: formattedDueDate,
       steps: validSteps
     })
     
@@ -105,6 +109,12 @@ function AddGoalForm({ onSubmit, onCancel }) {
     setDescription('')
     setDueDate('')
     setSteps([''])
+  }
+
+  // Get today's date in YYYY-MM-DD format for min date
+  const getTodayDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
   }
 
   return (
@@ -134,12 +144,25 @@ function AddGoalForm({ onSubmit, onCancel }) {
 
         <div className="form-group">
           <label>Due Date</label>
-          <input
-            type="text"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            placeholder="e.g., Dec 31, 2025 or Ongoing"
-          />
+          <div className="date-input-wrapper">
+            <input
+              type="date"
+              value={dueDate}
+              min={getTodayDate()}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="date-input"
+            />
+            {dueDate && (
+              <button
+                type="button"
+                onClick={() => setDueDate('')}
+                className="clear-date-btn"
+                title="Clear due date"
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="form-group">

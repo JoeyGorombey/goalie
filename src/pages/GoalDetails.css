@@ -140,10 +140,23 @@
   color: white;
 }
 
-.status-overdue {
+.status-behind {
+  background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+  color: white;
+  animation: pulseBadge 2s ease-in-out infinite;
+}
+
+.status-late {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
   animation: pulseBadge 2s ease-in-out infinite;
+}
+
+.status-late-behind {
+  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+  color: white;
+  animation: pulseBadge 1.5s ease-in-out infinite;
+  box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
 }
 
 .status-completed {
@@ -183,6 +196,108 @@
   font-size: 1.1rem;
   font-weight: 500;
   margin: 0;
+}
+
+.goal-due-date-display {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.goal-date-edit-btn {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.goal-date-edit-btn:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+.goal-date-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px solid #667eea;
+}
+
+.goal-date-label {
+  font-size: 1rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.goal-date-input {
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  min-width: 180px;
+  transition: border-color 0.2s;
+}
+
+.goal-date-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.goal-date-save-btn,
+.goal-date-cancel-btn {
+  padding: 8px 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.goal-date-save-btn {
+  background: #4caf50;
+  color: white;
+}
+
+.goal-date-save-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.goal-date-cancel-btn {
+  background: #f44336;
+  color: white;
+}
+
+.goal-date-cancel-btn:hover {
+  background: #da190b;
+  transform: scale(1.05);
+}
+
+.goal-date-clear-btn {
+  padding: 8px 14px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.goal-date-clear-btn:hover {
+  background: #fb8c00;
+  transform: scale(1.05);
 }
 
 .progress-display {
@@ -279,6 +394,28 @@
   cursor: grabbing;
 }
 
+.milestone-item.milestone-overdue {
+  border-left: 4px solid #f5576c;
+  background: #fff5f5;
+}
+
+.milestone-item.milestone-overdue:hover {
+  background: #ffe5e5;
+}
+
+.overdue-flag {
+  color: #f5576c;
+  font-weight: bold;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.milestone-sort-note {
+  font-size: 0.85rem;
+  color: #999;
+  font-weight: normal;
+  margin-left: 10px;
+}
+
 .milestone-drag-handle {
   color: #999;
   font-size: 1.2rem;
@@ -355,6 +492,11 @@
   font-size: 0.85rem;
   color: #667eea;
   font-weight: 500;
+}
+
+.milestone-due-date.overdue {
+  color: #f5576c;
+  font-weight: 600;
   line-height: 1.2;
   margin-top: 0.1rem;
 }

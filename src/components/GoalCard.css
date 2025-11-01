@@ -56,10 +56,23 @@
   color: white;
 }
 
-.goal-card-status.status-overdue {
+.goal-card-status.status-behind {
+  background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+  color: white;
+  animation: pulseBadge 2s ease-in-out infinite;
+}
+
+.goal-card-status.status-late {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
   animation: pulseBadge 2s ease-in-out infinite;
+}
+
+.goal-card-status.status-late-behind {
+  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+  color: white;
+  animation: pulseBadge 1.5s ease-in-out infinite;
+  box-shadow: 0 3px 10px rgba(211, 47, 47, 0.4);
 }
 
 .goal-card-status.status-completed {

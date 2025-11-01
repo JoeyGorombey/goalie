@@ -14,6 +14,40 @@ initializeDatabase();
 app.use(cors());
 app.use(express.json());
 
+// Helper function to validate dates are not in the past
+// Only validates when explicitly setting a NEW date, not for existing dates
+function validateDateNotPast(dateString, isNewDate = true) {
+  if (!dateString || dateString === 'No due date' || dateString.trim() === '') {
+    return { valid: true }; // Allow no date or "No due date"
+  }
+  
+  // Don't validate existing dates that are already in the system
+  // This allows goals/milestones with historical dates to be updated
+  if (!isNewDate) {
+    return { valid: true };
+  }
+  
+  try {
+    const date = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (date < today) {
+      return { 
+        valid: false, 
+        error: 'Due date cannot be in the past' 
+      };
+    }
+    
+    return { valid: true };
+  } catch (e) {
+    return { 
+      valid: false, 
+      error: 'Invalid date format' 
+    };
+  }
+}
+
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
@@ -171,6 +205,12 @@ app.post('/api/goals', (req, res) => {
       return res.status(400).json({ error: 'Goal title is required' });
     }
 
+    // Validate due date is not in the past
+    const dateValidation = validateDateNotPast(dueDate);
+    if (!dateValidation.valid) {
+      return res.status(400).json({ error: dateValidation.error });
+    }
+
     // Insert goal
     const insertGoal = db.prepare(`
       INSERT INTO goals (title, description, dueDate)
@@ -292,6 +332,26 @@ app.put('/api/goals/:id', (req, res) => {
 
     // Update goal fields if provided
     if (title !== undefined || description !== undefined || dueDate !== undefined) {
+      // Validate due date is not in the past if being changed
+      if (dueDate !== undefined) {
+        // Get current goal to check if date is actually being changed
+        const currentGoal = db.prepare('SELECT dueDate FROM goals WHERE id = ?').get(goalId);
+        const isDateBeingChanged = currentGoal && currentGoal.dueDate !== dueDate;
+        
+        console.log(`📅 Date validation check:`, {
+          currentDate: currentGoal?.dueDate,
+          newDate: dueDate,
+          isBeingChanged: isDateBeingChanged
+        });
+        
+        // Only validate if the date is actually being changed to a new value
+        const dateValidation = validateDateNotPast(dueDate, isDateBeingChanged);
+        if (!dateValidation.valid) {
+          console.log(`❌ Date validation failed:`, dateValidation.error);
+          return res.status(400).json({ error: dateValidation.error });
+        }
+      }
+
       const updates = [];
       const values = [];
 
@@ -308,7 +368,7 @@ app.put('/api/goals/:id', (req, res) => {
         values.push(dueDate || null);
       }
 
-      updates.push('updatedAt = datetime("now")');
+      updates.push("updatedAt = datetime('now')");
       values.push(goalId);
 
       const sql = `UPDATE goals SET ${updates.join(', ')} WHERE id = ?`;
@@ -320,8 +380,13 @@ app.put('/api/goals/:id', (req, res) => {
     
     res.json(updatedGoal);
   } catch (error) {
-    console.error('Error updating goal:', error);
-    res.status(500).json({ error: 'Failed to update goal' });
+    console.error('❌ Error updating goal:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    res.status(500).json({ 
+      error: 'Failed to update goal',
+      details: error.message 
+    });
   }
 });
 
@@ -682,6 +747,18 @@ app.put('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
 
     // Update dueDate if provided (null to clear)
     if (dueDate !== undefined) {
+      // Validate date is not in the past if being changed
+      if (dueDate) {
+        // Get current milestone to check if date is actually being changed
+        const currentMilestone = db.prepare('SELECT dueDate FROM milestones WHERE id = ? AND goalId = ?').get(milestoneId, goalId);
+        const isDateBeingChanged = currentMilestone && currentMilestone.dueDate !== dueDate;
+        
+        // Only validate if the date is actually being changed to a new value
+        const dateValidation = validateDateNotPast(dueDate, isDateBeingChanged);
+        if (!dateValidation.valid) {
+          return res.status(400).json({ error: dateValidation.error });
+        }
+      }
       updates.push('dueDate = ?');
       values.push(dueDate || null);
     }

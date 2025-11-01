@@ -11,27 +11,55 @@ function GoalCard({ goal }) {
   const completedCount = goal.milestones?.filter(m => m.completed).length || 0
   const totalCount = goal.milestones?.length || 0
 
+  // Helper function to check if milestone is overdue
+  const isMilestoneOverdue = (milestone) => {
+    if (!milestone.dueDate || milestone.completed) return false
+    try {
+      const dueDate = new Date(milestone.dueDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      return dueDate < today
+    } catch (e) {
+      return false
+    }
+  }
+
   // Determine goal display status
   const getGoalStatus = () => {
     if (goal.status === 'completed') {
       return { text: 'Completed', class: 'status-completed', emoji: '✅' }
     }
     
-    // Check if overdue
+    // Check if any incomplete milestones are overdue (behind)
+    const hasBehindMilestones = goal.milestones?.some(m => isMilestoneOverdue(m))
+    
+    // Check if goal itself is overdue (late)
+    let isGoalOverdue = false
     if (goal.dueDate && goal.dueDate !== 'No due date') {
       try {
         const dueDate = new Date(goal.dueDate)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        if (dueDate < today) {
-          return { text: 'Overdue', class: 'status-overdue', emoji: '⚠️' }
-        }
+        isGoalOverdue = dueDate < today
       } catch (e) {
         console.error('Error parsing due date:', e)
       }
     }
     
-    return { text: 'Active', class: 'status-active', emoji: '🎯' }
+    // Determine secondary status
+    if (isGoalOverdue && hasBehindMilestones) {
+      return { text: 'Late & Behind', class: 'status-late-behind', emoji: '🚨' }
+    }
+    
+    if (isGoalOverdue) {
+      return { text: 'Late', class: 'status-late', emoji: '⚠️' }
+    }
+    
+    if (hasBehindMilestones) {
+      return { text: 'Behind', class: 'status-behind', emoji: '⏰' }
+    }
+    
+    return { text: 'On Track', class: 'status-active', emoji: '🎯' }
   }
 
   const statusInfo = getGoalStatus()
