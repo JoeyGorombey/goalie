@@ -5,11 +5,19 @@ import GoalList from '../components/GoalList.jsx'
 import { getAllGoals, addGoal } from '../services/goalStorage.js'
 import { useError } from '../context/ErrorContext.jsx'
 import { parseDateFromInput } from '../utils/dateUtils.js'
+import { getGoalStatusType } from '../utils/goalStatusUtils.js'
 import './MyGoals.css'
 
 function MyGoals() {
   const [goals, setGoals] = useState([])
   const [showAddForm, setShowAddForm] = useState(false)
+  const [activeFilters, setActiveFilters] = useState({
+    'on-track': true,
+    'behind': true,
+    'late': true,
+    'late-behind': true,
+    'completed': true
+  })
   const { showError } = useError()
 
   // Load goals from API when component mounts
@@ -36,18 +44,148 @@ function MyGoals() {
     }
   }
 
+  // Toggle filter
+  const toggleFilter = (filterKey) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      [filterKey]: !prev[filterKey]
+    }))
+  }
+
+  // Select/Deselect all filters
+  const selectAllFilters = () => {
+    setActiveFilters({
+      'on-track': true,
+      'behind': true,
+      'late': true,
+      'late-behind': true,
+      'completed': true
+    })
+  }
+
+  const deselectAllFilters = () => {
+    setActiveFilters({
+      'on-track': false,
+      'behind': false,
+      'late': false,
+      'late-behind': false,
+      'completed': false
+    })
+  }
+
+  // Filter goals based on active filters
+  const filteredGoals = goals.filter(goal => {
+    const statusType = getGoalStatusType(goal)
+    return activeFilters[statusType]
+  })
+
+  // Count goals by status
+  const statusCounts = goals.reduce((acc, goal) => {
+    const statusType = getGoalStatusType(goal)
+    acc[statusType] = (acc[statusType] || 0) + 1
+    return acc
+  }, {})
+
   return (
     <div className="my-goals-page">
       <NavBar />
       <Greeting name="Joey" />
       
-      <div className="my-goals-actions">
-        <button 
-          className="add-goal-btn"
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          {showAddForm ? '✕ Cancel' : '+ Add New Goal'}
-        </button>
+      <div className="my-goals-controls">
+        <div className="my-goals-actions">
+          <button 
+            className="add-goal-btn"
+            onClick={() => setShowAddForm(!showAddForm)}
+          >
+            {showAddForm ? '✕ Cancel' : '+ Add New Goal'}
+          </button>
+        </div>
+
+        <div className="my-goals-filters">
+          <div className="filter-header">
+            <h3>Filter by Status</h3>
+            <div className="filter-quick-actions">
+              <button onClick={selectAllFilters} className="filter-quick-btn">All</button>
+              <button onClick={deselectAllFilters} className="filter-quick-btn">None</button>
+            </div>
+          </div>
+          
+          <div className="filter-options">
+            <label className="filter-option">
+              <input
+                type="checkbox"
+                checked={activeFilters['on-track']}
+                onChange={() => toggleFilter('on-track')}
+              />
+              <span className="filter-label">
+                🎯 On Track
+                {statusCounts['on-track'] > 0 && (
+                  <span className="filter-count">({statusCounts['on-track']})</span>
+                )}
+              </span>
+            </label>
+
+            <label className="filter-option">
+              <input
+                type="checkbox"
+                checked={activeFilters['behind']}
+                onChange={() => toggleFilter('behind')}
+              />
+              <span className="filter-label">
+                ⏰ Behind
+                {statusCounts['behind'] > 0 && (
+                  <span className="filter-count">({statusCounts['behind']})</span>
+                )}
+              </span>
+            </label>
+
+            <label className="filter-option">
+              <input
+                type="checkbox"
+                checked={activeFilters['late']}
+                onChange={() => toggleFilter('late')}
+              />
+              <span className="filter-label">
+                ⚠️ Late
+                {statusCounts['late'] > 0 && (
+                  <span className="filter-count">({statusCounts['late']})</span>
+                )}
+              </span>
+            </label>
+
+            <label className="filter-option">
+              <input
+                type="checkbox"
+                checked={activeFilters['late-behind']}
+                onChange={() => toggleFilter('late-behind')}
+              />
+              <span className="filter-label">
+                🚨 Late & Behind
+                {statusCounts['late-behind'] > 0 && (
+                  <span className="filter-count">({statusCounts['late-behind']})</span>
+                )}
+              </span>
+            </label>
+
+            <label className="filter-option">
+              <input
+                type="checkbox"
+                checked={activeFilters['completed']}
+                onChange={() => toggleFilter('completed')}
+              />
+              <span className="filter-label">
+                ✅ Completed
+                {statusCounts['completed'] > 0 && (
+                  <span className="filter-count">({statusCounts['completed']})</span>
+                )}
+              </span>
+            </label>
+          </div>
+
+          <div className="filter-summary">
+            Showing {filteredGoals.length} of {goals.length} goals
+          </div>
+        </div>
       </div>
 
       {showAddForm && (
@@ -57,7 +195,7 @@ function MyGoals() {
         />
       )}
 
-      <GoalList goals={goals} />
+      <GoalList goals={filteredGoals} />
     </div>
   )
 }
