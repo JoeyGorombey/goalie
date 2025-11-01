@@ -1,0 +1,207 @@
+.streak-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.streak-modal {
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(255, 87, 34, 0.3);
+  position: relative;
+  animation: slideUp 0.4s ease-out;
+  text-align: center;
+  border: 3px solid #ff5722;
+}
+
+.streak-flames {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.streak-title {
+  font-size: 2rem;
+  margin: 0 0 1.5rem 0;
+  color: #ff5722;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(255, 87, 34, 0.2);
+}
+
+.streak-counter {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: linear-gradient(135deg, #ff5722 0%, #ff8a65 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(255, 87, 34, 0.4);
+}
+
+.streak-number {
+  font-size: 5rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.streak-label {
+  font-size: 1.2rem;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.streak-message {
+  font-size: 1.25rem;
+  color: #555;
+  margin: 1.5rem 0;
+  font-weight: 500;
+}
+
+.streak-record {
+  margin: 1.5rem 0;
+}
+
+.record-badge {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #333;
+  border-radius: 24px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.streak-stats {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+}
+
+.streak-stat {
+  font-size: 1rem;
+  color: #666;
+  margin: 0.5rem 0;
+}
+
+.streak-stat strong {
+  color: #ff5722;
+  font-weight: 700;
+}
+
+.streak-progress {
+  font-size: 0.95rem;
+  color: #888;
+  margin: 0.75rem 0 0 0;
+  font-style: italic;
+}
+
+.streak-close-btn {
+  margin-top: 2rem;
+  padding: 1rem 2.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+}
+
+.streak-close-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.streak-close-btn:active {
+  transform: translateY(-1px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.7);
+  }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .streak-modal {
+    padding: 2rem 1.5rem;
+  }
+  
+  .streak-title {
+    font-size: 1.5rem;
+  }
+  
+  .streak-number {
+    font-size: 4rem;
+  }
+  
+  .streak-flames {
+    font-size: 2.5rem;
+  }
+}
+

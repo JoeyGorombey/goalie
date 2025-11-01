@@ -4,6 +4,7 @@ import Greeting from '../components/Greeting.jsx'
 import GoalList from '../components/GoalList.jsx'
 import { getAllGoals, addGoal } from '../services/goalStorage.js'
 import { useError } from '../context/ErrorContext.jsx'
+import { useStreak } from '../context/StreakContext.jsx'
 import { parseDateFromInput } from '../utils/dateUtils.js'
 import { getGoalStatusType } from '../utils/goalStatusUtils.js'
 import './MyGoals.css'
@@ -19,6 +20,7 @@ function MyGoals() {
     'completed': true
   })
   const { showError } = useError()
+  const { checkAndShowStreak } = useStreak()
 
   // Load goals from API when component mounts
   useEffect(() => {
@@ -39,6 +41,9 @@ function MyGoals() {
       const newGoal = await addGoal(goalData)
       setGoals([...goals, newGoal])
       setShowAddForm(false)
+      
+      // Check if streak was updated and show modal
+      checkAndShowStreak(newGoal)
     } catch (error) {
       showError(error.message || 'Failed to create goal. Please try again.')
     }

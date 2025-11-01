@@ -29,6 +29,7 @@ import {
   completeGoal
 } from '../services/goalStorage.js'
 import { useError } from '../context/ErrorContext.jsx'
+import { useStreak } from '../context/StreakContext.jsx'
 import { formatDateForInput, parseDateFromInput, formatDateForDisplay } from '../utils/dateUtils.js'
 import './GoalDetails.css'
 
@@ -37,6 +38,7 @@ function GoalDetails() {
   const location = useLocation()
   const navigate = useNavigate()
   const { showError } = useError()
+  const { checkAndShowStreak } = useStreak()
   
   // Get the goal data (from state or storage)
   const [goal, setGoal] = useState(location.state?.goal)
@@ -187,6 +189,9 @@ function GoalDetails() {
       const updated = await updateGoal(goalId, goalToSave)
       setGoal(updated)
       setIsEditing(false)
+      
+      // Check if streak was updated
+      checkAndShowStreak(updated)
     } catch (error) {
       showError(error.message || 'Failed to update goal. Please try again.')
     }
@@ -207,6 +212,9 @@ function GoalDetails() {
     try {
       const updated = await toggleMilestone(goalId, milestoneId)
       setGoal(updated)
+      
+      // Check if streak was updated
+      checkAndShowStreak(updated)
     } catch (error) {
       showError(error.message || 'Failed to toggle milestone. Please try again.')
     }
@@ -219,6 +227,9 @@ function GoalDetails() {
       const updated = await addMilestone(goalId, newMilestoneText)
       setGoal(updated)
       setNewMilestoneText('')
+      
+      // Check if streak was updated
+      checkAndShowStreak(updated)
     } catch (error) {
       showError(error.message || 'Failed to add milestone. Please try again.')
     }
@@ -248,6 +259,9 @@ function GoalDetails() {
       setGoal(updated)
       setEditingMilestoneId(null)
       setEditingMilestoneText('')
+      
+      // Check if streak was updated
+      checkAndShowStreak(updated)
     } catch (error) {
       showError(error.message || 'Failed to update milestone. Please try again.')
     }
@@ -269,6 +283,9 @@ function GoalDetails() {
       setGoal(updatedGoal)
       setEditingMilestoneDateId(null)
       setEditingMilestoneDate('')
+      
+      // Check if streak was updated
+      checkAndShowStreak(updatedGoal)
     } catch (error) {
       showError(error.message || 'Failed to update milestone date. Please try again.')
     }
@@ -291,6 +308,9 @@ function GoalDetails() {
       setGoal(updated)
       setEditingGoalDate(false)
       setEditingGoalDateValue('')
+      
+      // Check if streak was updated
+      checkAndShowStreak(updated)
     } catch (error) {
       showError(error.message || 'Failed to update goal due date. Please try again.')
     }

@@ -7,15 +7,12 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 2rem;
+  position: relative;
 }
 
 .feed-header {
-  grid-column: 1 / -1;
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .feed-header h1 {
@@ -150,6 +147,10 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 0;
+  padding-top: 4rem;
+  clear: both;
+  position: relative;
 }
 
 .empty-icon {
@@ -236,6 +237,360 @@
   color: #333;
   font-size: 1.5rem;
   font-weight: 600;
+}
+
+.stats-loading {
+  padding: 1rem;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+.streak-stat {
+  background: linear-gradient(135deg, #fff5f0 0%, #ffe8dd 100%);
+  border: 2px solid #ff5722;
+}
+
+.streak-value {
+  color: #ff5722;
+  font-size: 2rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.stat-subtext {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+}
+
+.stat-subtext.record {
+  color: #ff5722;
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* Banner and Stats Row */
+.banner-stats-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  align-items: stretch;
+  width: 100%;
+  position: relative;
+}
+
+.banner-section {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+/* Streak Banners - Compact */
+.streak-cta-banner {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+  border: 2px solid #ff9800;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 3px 10px rgba(255, 152, 0, 0.2);
+  animation: pulseGlow 2s ease-in-out infinite;
+  height: 100%;
+}
+
+.streak-cta-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
+}
+
+.streak-cta-icon {
+  font-size: 2.5rem;
+  animation: bounce 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.streak-cta-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.streak-cta-text h3 {
+  margin: 0 0 0.25rem 0;
+  color: #e65100;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.streak-cta-text p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.streak-cta-button {
+  padding: 0.7rem 1.25rem;
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(255, 152, 0, 0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.streak-cta-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 5px 15px rgba(255, 152, 0, 0.6);
+}
+
+.streak-congrats-banner {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border: 2px solid #4caf50;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+  animation: celebrateSlide 0.6s ease-out;
+  height: 100%;
+}
+
+.streak-congrats-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
+}
+
+.streak-congrats-icon {
+  font-size: 2.5rem;
+  animation: rotate 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.streak-congrats-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.streak-congrats-text h3 {
+  margin: 0 0 0.25rem 0;
+  color: #2e7d32;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.streak-congrats-text p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.streak-congrats-text strong {
+  color: #ff5722;
+  font-weight: 800;
+}
+
+.streak-congrats-flame {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 2rem;
+  animation: flame 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.streak-number-compact {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ff5722;
+  text-shadow: 1px 1px 3px rgba(255, 87, 34, 0.3);
+}
+
+/* Compact Stats */
+.quick-stats-compact {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 280px;
+  max-width: 320px;
+}
+
+.quick-stats-compact h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stat-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.stat-icon-compact {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.stat-value-compact {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat-label-compact {
+  margin: 0.25rem 0 0 0;
+  color: #666;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.stat-subtext-compact {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.7rem;
+  color: #888;
+  font-style: italic;
+}
+
+.streak-stat-compact {
+  background: linear-gradient(135deg, #fff5f0 0%, #ffe8dd 100%);
+  border: 1px solid #ff5722;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+  }
+}
+
+@keyframes celebrateSlide {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes rotate {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes flame {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.1) translateY(-5px);
+  }
+}
+
+/* Feed Posts Full Width */
+.feed-posts-full {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 100%;
+  margin-top: 0;
+  padding-top: 0;
+  clear: both;
+  position: relative;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .banner-stats-row {
+    flex-direction: column;
+    margin-bottom: 2.5rem;
+  }
+  
+  .quick-stats-compact {
+    max-width: 100%;
+  }
+  
+  .stats-grid {
+    flex-direction: row;
+    gap: 1rem;
+  }
+  
+  .stat-compact {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .banner-stats-row {
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .streak-cta-content,
+  .streak-congrats-content {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .streak-cta-button {
+    width: 100%;
+  }
+  
+  .stats-grid {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 576px) {
+  .banner-section {
+    min-width: 100%;
+  }
+  
+  .quick-stats-compact {
+    min-width: 100%;
+  }
+  
+  .streak-cta-text h3,
+  .streak-congrats-text h3 {
+    font-size: 1rem;
+  }
+  
+  .streak-cta-text p,
+  .streak-congrats-text p {
+    font-size: 0.85rem;
+  }
 }
 
 .suggested-users {

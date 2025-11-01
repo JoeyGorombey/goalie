@@ -3,6 +3,12 @@ const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const { db, initializeDatabase, getGoalWithMilestones, getAllGoalsWithMilestones } = require('./db/schema');
+const { 
+  logActivity, 
+  getUserStats, 
+  getGoalsCompletedThisWeek, 
+  getActiveGoalsCount 
+} = require('./utils/streakCalculator');
 
 const app = express();
 const PORT = 3001;
@@ -242,7 +248,17 @@ app.post('/api/goals', (req, res) => {
     const newGoal = getGoalWithMilestones(goalId);
     console.log(`✅ Created goal ${goalId}: "${title}"`);
     
-    res.status(201).json(newGoal);
+    // Log activity and update streak
+    const streakData = logActivity(db, 'goal_created', goalId);
+    
+    res.status(201).json({
+      ...newGoal,
+      streakUpdate: {
+        currentStreak: streakData.currentStreak,
+        longestStreak: streakData.longestStreak,
+        isNewStreakDay: streakData.isNewStreakDay
+      }
+    });
   } catch (error) {
     console.error('Error creating goal:', error);
     res.status(500).json({ error: 'Failed to create goal' });
@@ -378,7 +394,17 @@ app.put('/api/goals/:id', (req, res) => {
     const updatedGoal = getGoalWithMilestones(goalId);
     console.log(`✅ Updated goal ${goalId}`);
     
-    res.json(updatedGoal);
+    // Log activity and update streak
+    const streakData = logActivity(db, 'goal_updated', goalId);
+    
+    res.json({
+      ...updatedGoal,
+      streakUpdate: {
+        currentStreak: streakData.currentStreak,
+        longestStreak: streakData.longestStreak,
+        isNewStreakDay: streakData.isNewStreakDay
+      }
+    });
   } catch (error) {
     console.error('❌ Error updating goal:', error);
     console.error('Error stack:', error.stack);
@@ -556,6 +582,10 @@ app.post('/api/goals/:goalId/milestones/:milestoneId/toggle', (req, res) => {
     const goalId = parseInt(req.params.goalId);
     const milestoneId = parseInt(req.params.milestoneId);
 
+    // Get current milestone state
+    const milestone = db.prepare('SELECT completed FROM milestones WHERE id = ? AND goalId = ?').get(milestoneId, goalId);
+    const wasCompleted = milestone?.completed === 1;
+
     // Toggle completion status
     db.prepare(`
       UPDATE milestones 
@@ -570,7 +600,21 @@ app.post('/api/goals/:goalId/milestones/:milestoneId/toggle', (req, res) => {
     }
 
     console.log(`✅ Toggled milestone ${milestoneId}`);
-    res.json(updatedGoal);
+    
+    // Log activity and update streak only if milestone is now completed
+    let streakData = null;
+    if (!wasCompleted) {
+      streakData = logActivity(db, 'milestone_completed', goalId);
+    }
+    
+    res.json({
+      ...updatedGoal,
+      streakUpdate: streakData ? {
+        currentStreak: streakData.currentStreak,
+        longestStreak: streakData.longestStreak,
+        isNewStreakDay: streakData.isNewStreakDay
+      } : null
+    });
   } catch (error) {
     console.error('Error toggling milestone:', error);
     res.status(500).json({ error: 'Failed to toggle milestone' });
@@ -652,7 +696,17 @@ app.post('/api/goals/:goalId/milestones', (req, res) => {
     const updatedGoal = getGoalWithMilestones(goalId);
     console.log(`✅ Added milestone to goal ${goalId}`);
     
-    res.status(201).json(updatedGoal);
+    // Log activity and update streak
+    const streakData = logActivity(db, 'milestone_added', goalId);
+    
+    res.status(201).json({
+      ...updatedGoal,
+      streakUpdate: {
+        currentStreak: streakData.currentStreak,
+        longestStreak: streakData.longestStreak,
+        isNewStreakDay: streakData.isNewStreakDay
+      }
+    });
   } catch (error) {
     console.error('Error adding milestone:', error);
     res.status(500).json({ error: 'Failed to add milestone' });
@@ -772,7 +826,17 @@ app.put('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
     const updatedGoal = getGoalWithMilestones(goalId);
     console.log(`✅ Updated milestone ${milestoneId}:`, { text, dueDate });
     
-    res.json(updatedGoal);
+    // Log activity and update streak
+    const streakData = logActivity(db, 'milestone_updated', goalId);
+    
+    res.json({
+      ...updatedGoal,
+      streakUpdate: {
+        currentStreak: streakData.currentStreak,
+        longestStreak: streakData.longestStreak,
+        isNewStreakDay: streakData.isNewStreakDay
+      }
+    });
   } catch (error) {
     console.error('Error updating milestone:', error);
     res.status(500).json({ error: 'Failed to update milestone' });
@@ -837,6 +901,111 @@ app.delete('/api/goals/:goalId/milestones/:milestoneId', (req, res) => {
   } catch (error) {
     console.error('Error deleting milestone:', error);
     res.status(500).json({ error: 'Failed to delete milestone' });
+  }
+});
+
+// ============================================================================
+// DASHBOARD STATS & STREAK ENDPOINTS
+// ============================================================================
+
+/**
+ * @swagger
+ * /api/stats/dashboard:
+ *   get:
+ *     summary: Get dashboard statistics
+ *     description: Get active goals count, goals completed this week, and current streak
+ *     tags: [Stats]
+ *     responses:
+ *       200:
+ *         description: Dashboard stats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 activeGoals:
+ *                   type: integer
+ *                   example: 5
+ *                 completedThisWeek:
+ *                   type: integer
+ *                   example: 2
+ *                 currentStreak:
+ *                   type: integer
+ *                   example: 7
+ *                 longestStreak:
+ *                   type: integer
+ *                   example: 14
+ *                 lastActivityDate:
+ *                   type: string
+ *                   example: "2025-11-01"
+ *       500:
+ *         description: Server error
+ */
+app.get('/api/stats/dashboard', (req, res) => {
+  try {
+    const activeGoals = getActiveGoalsCount(db);
+    const completedThisWeek = getGoalsCompletedThisWeek(db);
+    const userStats = getUserStats(db);
+    
+    // Check if user has activity today
+    const { getTodayDate } = require('./utils/streakCalculator');
+    const today = getTodayDate();
+    const hasActivityToday = db.prepare(`
+      SELECT COUNT(*) as count FROM activity_log WHERE activityDate = ?
+    `).get(today);
+    
+    res.json({
+      activeGoals,
+      completedThisWeek,
+      currentStreak: userStats.currentStreak || 0,
+      longestStreak: userStats.longestStreak || 0,
+      lastActivityDate: userStats.lastActivityDate,
+      hasActivityToday: (hasActivityToday?.count || 0) > 0
+    });
+  } catch (error) {
+    console.error('Error getting dashboard stats:', error);
+    res.status(500).json({ error: 'Failed to get dashboard stats' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/stats/streak:
+ *   get:
+ *     summary: Get current streak information
+ *     description: Get detailed streak data including current and longest streaks
+ *     tags: [Stats]
+ *     responses:
+ *       200:
+ *         description: Streak data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 currentStreak:
+ *                   type: integer
+ *                   example: 7
+ *                 longestStreak:
+ *                   type: integer
+ *                   example: 14
+ *                 lastActivityDate:
+ *                   type: string
+ *                   example: "2025-11-01"
+ *       500:
+ *         description: Server error
+ */
+app.get('/api/stats/streak', (req, res) => {
+  try {
+    const userStats = getUserStats(db);
+    res.json({
+      currentStreak: userStats.currentStreak || 0,
+      longestStreak: userStats.longestStreak || 0,
+      lastActivityDate: userStats.lastActivityDate
+    });
+  } catch (error) {
+    console.error('Error getting streak:', error);
+    res.status(500).json({ error: 'Failed to get streak data' });
   }
 });
 

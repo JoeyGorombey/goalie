@@ -1,7 +1,58 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar.jsx'
+import { useStreak } from '../context/StreakContext.jsx'
 import './Dashboard.css'
 
 function Dashboard() {
+  const navigate = useNavigate()
+  const { hasExtendedStreakToday } = useStreak()
+  const [stats, setStats] = useState({
+    activeGoals: 0,
+    completedThisWeek: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    hasActivityToday: false
+  })
+  const [loading, setLoading] = useState(true)
+  const [streakExtendedToday, setStreakExtendedToday] = useState(false)
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/stats/dashboard')
+        if (response.ok) {
+          const data = await response.json()
+          setStats(data)
+          // Check if streak was extended today (from localStorage)
+          setStreakExtendedToday(hasExtendedStreakToday())
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchStats()
+  }, [hasExtendedStreakToday])
+
+  // Listen for streak extension events
+  useEffect(() => {
+    const handleStreakExtended = () => {
+      setStreakExtendedToday(true)
+      // Refresh stats to get updated counts
+      fetch('http://localhost:3001/api/stats/dashboard')
+        .then(res => res.json())
+        .then(data => setStats(data))
+        .catch(err => console.error('Error refreshing stats:', err))
+    }
+
+    window.addEventListener('streakExtended', handleStreakExtended)
+    return () => window.removeEventListener('streakExtended', handleStreakExtended)
+  }, [])
+
   // Sample feed data - will come from following users later
   const feedPosts = [
     {
@@ -46,6 +97,91 @@ function Dashboard() {
           <p className="feed-subtitle">See what your connections are achieving</p>
         </div>
 
+        {/* Banner and Stats Row */}
+        <div className="banner-stats-row">
+          {/* Streak Banners */}
+          <div className="banner-section">
+            {!loading && !streakExtendedToday && stats.currentStreak >= 0 && (
+              <div className="streak-cta-banner">
+                <div className="streak-cta-content">
+                  <div className="streak-cta-icon">🔥</div>
+                  <div className="streak-cta-text">
+                    <h3>Keep Your Streak Alive!</h3>
+                    <p>
+                      {stats.currentStreak === 0 
+                        ? "Start your streak today!" 
+                        : `${stats.currentStreak} day streak! Don't break it!`}
+                    </p>
+                  </div>
+                  <button 
+                    className="streak-cta-button"
+                    onClick={() => navigate('/my-goals')}
+                  >
+                    Extend 🚀
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!loading && streakExtendedToday && (
+              <div className="streak-congrats-banner">
+                <div className="streak-congrats-content">
+                  <div className="streak-congrats-icon">🎉</div>
+                  <div className="streak-congrats-text">
+                    <h3>Streak Extended! 🔥</h3>
+                    <p>
+                      <strong>{stats.currentStreak} days</strong>! 
+                      {stats.currentStreak === stats.longestStreak && stats.currentStreak > 1 ? (
+                        <span> Personal best! 🏆</span>
+                      ) : stats.currentStreak < stats.longestStreak ? (
+                        <span> {stats.longestStreak - stats.currentStreak} to beat your record!</span>
+                      ) : null}
+                    </p>
+                  </div>
+                  <div className="streak-congrats-flame">
+                    🔥<span className="streak-number-compact">{stats.currentStreak}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Stats */}
+          <div className="quick-stats-compact">
+            <h3>Your Stats</h3>
+            {loading ? (
+              <div className="stats-loading">Loading...</div>
+            ) : (
+              <div className="stats-grid">
+                <div className="stat-compact">
+                  <span className="stat-icon-compact">🎯</span>
+                  <div>
+                    <p className="stat-value-compact">{stats.activeGoals}</p>
+                    <p className="stat-label-compact">Active Goals</p>
+                  </div>
+                </div>
+                <div className="stat-compact">
+                  <span className="stat-icon-compact">✅</span>
+                  <div>
+                    <p className="stat-value-compact">{stats.completedThisWeek}</p>
+                    <p className="stat-label-compact">This Week</p>
+                  </div>
+                </div>
+                <div className="stat-compact streak-stat-compact">
+                  <span className="stat-icon-compact">🔥</span>
+                  <div>
+                    <p className="stat-value-compact streak-value">{stats.currentStreak}</p>
+                    <p className="stat-label-compact">Day Streak</p>
+                    {stats.longestStreak > stats.currentStreak && (
+                      <p className="stat-subtext-compact">Best: {stats.longestStreak}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {feedPosts.length === 0 ? (
           <div className="feed-empty">
             <div className="empty-icon">🔍</div>
@@ -56,63 +192,12 @@ function Dashboard() {
             </button>
           </div>
         ) : (
-          <div className="feed-posts">
+          <div className="feed-posts-full">
             {feedPosts.map(post => (
               <FeedPost key={post.id} post={post} />
             ))}
           </div>
         )}
-
-        <div className="feed-sidebar">
-          <div className="sidebar-widget">
-            <h3>Your Quick Stats</h3>
-            <div className="quick-stats">
-              <div className="quick-stat">
-                <span className="stat-icon">🎯</span>
-                <div className="stat-info">
-                  <p className="stat-label">Active Goals</p>
-                  <p className="stat-value">0</p>
-                </div>
-              </div>
-              <div className="quick-stat">
-                <span className="stat-icon">✅</span>
-                <div className="stat-info">
-                  <p className="stat-label">Completed This Week</p>
-                  <p className="stat-value">0</p>
-                </div>
-              </div>
-              <div className="quick-stat">
-                <span className="stat-icon">🔥</span>
-                <div className="stat-info">
-                  <p className="stat-label">Day Streak</p>
-                  <p className="stat-value">0</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="sidebar-widget">
-            <h3>Suggested Connections</h3>
-            <div className="suggested-users">
-              <div className="suggested-user-mini">
-                <span className="mini-avatar">👤</span>
-                <div className="mini-info">
-                  <p className="mini-name">Alex Kim</p>
-                  <p className="mini-bio">Fitness enthusiast</p>
-                </div>
-                <button className="mini-follow-btn">Follow</button>
-              </div>
-              <div className="suggested-user-mini">
-                <span className="mini-avatar">👤</span>
-                <div className="mini-info">
-                  <p className="mini-name">Lisa Wang</p>
-                  <p className="mini-bio">Learning Spanish</p>
-                </div>
-                <button className="mini-follow-btn">Follow</button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
